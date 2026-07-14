@@ -80,9 +80,38 @@ function graphQuestEncodeGif(frames,width,height,delay=10){
     return new Blob([new Uint8Array(out)],{type:"image/gif"});
 }
 
+function graphQuestIsMobileDevice(scene){
+    const userAgentDataMobile=navigator.userAgentData?.mobile===true;
+    const iPadDesktopMode=navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1;
+    return scene.game.mobile||userAgentDataMobile||iPadDesktopMode;
+}
+
+function graphQuestHandleTypeKey(event){
+    const scene=window.game?.current;
+    if(!(scene instanceof EI)||graphQuestIsMobileDevice(scene)||scene.mode!=="advanced"||scene.overlay!=="none"||scene.animating||scene.gifExporting)return;
+    if(event.ctrlKey||event.metaKey||event.altKey||event.isComposing)return;
+
+    let changed=false;
+    if(event.key==="Backspace"||event.key==="Delete"){
+        if(scene.adv.length){scene.adv=scene.adv.slice(0,-1);changed=true}
+    }else if(event.key.length===1&&/[0-9a-z+\-*/^()., ]/i.test(event.key)){
+        scene.adv+=event.key.toLowerCase();
+        changed=true;
+    }
+
+    if(!changed)return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    scene.afterEdit();
+}
+
 const graphQuestPlaySetup=EI.prototype.setup;
 EI.prototype.setup=function(){
     graphQuestPlaySetup.call(this);
+    if(!window.graphQuestTypeKeyboardInstalled){
+        window.addEventListener("keydown",graphQuestHandleTypeKey,true);
+        window.graphQuestTypeKeyboardInstalled=true;
+    }
     this.shareBtn={x:24,y:226,w:160,h:22};
     this.gifBtn={x:200,y:226,w:160,h:22};
     this.gifExporting=false;
