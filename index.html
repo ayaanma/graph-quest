@@ -23,6 +23,7 @@
 <body>
 <div id="stage"><canvas id="game"></canvas></div>
 <div id="boot">loading…</div>
+<script src="./levels.js"></script>
 <script type="module">
     try { await import("./content.js"); requestAnimationFrame(() => document.body.classList.add("booted")); }
     catch (e) { document.getElementById("boot").textContent = "failed to load: " + (e && e.message || e); }
