@@ -1,14 +1,8 @@
 To Do List:
-- Make it space themed
 - Leaderboards
 - Level editor
 - GIF exports
 - Daily challenges
 - 30 default levels
 - Make levels backwards (start with function, add obstacles and stars after)
-- Make sure text doesn't overlap
 - Add keyboard input
-- Add button to toggle button clicking input
-- Remove function trace
-- Fix 3rd degree polynomial and sqrt functions
-- Remove constant option
