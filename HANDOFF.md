@@ -1,15 +1,15 @@
-# GraphQuest — Agent Handoff
+# Gradient Descent — Agent Handoff
 
-_Last updated: 2026-07-14 · Published version: **21** · Phaser project id: `RjzqGQux4x1`_
+_Last updated: 2026-07-14 · Published version: **31** · Phaser project id: `RjzqGQux4x1`_
 
 ## TL;DR — read this first
 
-**This local folder is a BUILT EXPORT, not the source of truth.**
-`content.js` is a minified esbuild bundle and `levels.js` is generated data. **Do not edit them** — changes here do nothing to the real game.
+**This local folder is a DEVVIT WEB WRAPPER around a built export, not the gameplay source of truth.**
+`src/client/public/content.js` is a minified esbuild bundle and `src/client/public/levels.js` is generated data. **Do not edit them** — changes there do nothing to the real game. Devvit configuration and server code in this repository are editable normally.
 
 The **real, editable TypeScript source lives in the Phaser Game Agent cloud sandbox**, project `RjzqGQux4x1`, owned by the user's Phaser account (user `maatm`). You reach it through the **`phaser-game-agent` MCP tools**, never through the local filesystem.
 
-GraphQuest is a synthwave function-graphing puzzle: the player writes `f(x)`, and a ship traces the curve `g(x) = f(x) - f(x_start) + y_start` across a tilted 2.5D Cartesian grid, dodging rectangular obstacles, threading stars, and reaching a goal.
+Gradient Descent is a synthwave function-graphing puzzle: the player writes `f(x)`, and a ship traces the curve `g(x) = f(x) - f(x_start) + y_start` across a tilted 2.5D Cartesian grid, dodging rectangular obstacles, threading stars, and reaching a goal.
 
 ## How to work on it (the MCP workflow)
 
@@ -19,14 +19,23 @@ All tools are prefixed `mcp__phaser-game-agent__phaser_game_agent_*` (some are d
 2. **`snapshot`** with a label before any big/risky change (keeps newest 5; restore with `restore`).
 3. **`read_files`** / **`grep`** / **`ls`** to explore. ⚠️ `read_files` fails if the batch is too large — read big files (e.g. `play.ts` ~34KB) one at a time.
 4. **`write_files`** to author. ⚠️ **This overwrites the ENTIRE file** — there is no partial-edit tool for the sandbox. You must supply full file contents. Read the file first, modify, write it whole.
-5. **`verify`** — runs `tsc` (type-check) + `src/verify.ts` acceptance tests. Must be `ok: true` before publishing. Currently **218 tests pass, 0 fail**.
+5. **`verify`** — runs `tsc` (type-check) + `src/verify.ts` acceptance tests. Must be `ok: true` before publishing. Currently **228 tests pass, 0 fail**.
 6. **`preview`** with a `changes:` note — builds + publishes a new version to the user's Phaser account, returns the play URL.
 7. **`finish`** — pauses the sandbox to stop billing (auto-resumes on next call). Call it when done each session.
 
 **Play URL:** https://phaser.io/agent/local/RjzqGQux4x1
-**Credits:** ~1152 remaining (each session bills a little; `finish` stops idle billing).
+**Credits:** ~878 remaining (each session bills a little; `finish` stops idle billing).
 
 Engine docs live in the sandbox at `engine/raster/*.md` + `*.d.ts` — **reference only, never edit** `engine/`. Start with `engine/raster/index.md`, then per-topic docs (`input.md`, `particles.md`, etc.).
+
+## Devvit Web wrapper
+
+- `src/client/index.html` + `src/client/public/content.js` are the deployed browser game. The bundle lives under `public/` so Vite copies the generated file without rewriting it.
+- `src/client/public/assets/` and `src/client/public/levels.js` are copied unchanged into the client build.
+- `src/server/index.ts` hosts Devvit API and moderator post-creation endpoints.
+- `devvit.json` defines the custom-post entrypoint and moderator menu action.
+- `npm run check` type-checks, formats-checks, and builds; `npm run dev` starts a Reddit playtest; `npm run deploy` uploads a private build; `npm run launch` submits it for review.
+- Before first-time registration, `devvit.json` intentionally uses the official `<% name %>` placeholder. Run `npx devvit init` without `--force`, request `gradient-descent` if available, and let the CLI synchronize the registered slug into `devvit.json` and `package.json`.
 
 ## Source layout (in the sandbox, under `src/`)
 
@@ -63,7 +72,7 @@ spec/
 
 ★ = added during the level-editor work described below.
 
-## What was built recently (versions 12–21)
+## What was built recently (versions 12–31)
 
 Earlier (v12): ported three feature commits from the local build into the TS source — a moving spaceship trace head, the 30-level campaign, and physical-keyboard input in Advanced mode.
 
@@ -103,6 +112,14 @@ Earlier (v12): ported three feature commits from the local build into the TS sou
 - In v21 the complete overlay (title, time/stars/best, leaderboard, scroll controls, action buttons, hit targets, and feedback banner) moved down 12px as a unit, retaining all prior spacing.
 - Transient message boxes in Play, Editor, and Level Select now measure the actual 8×8 bitmap-font width, add 8px horizontal padding, expand up to the 376px safe width, and truncate only at that hard limit. The editor's `Can't cover start, goal, or a star` warning now gets a 288px box instead of overflowing a fixed banner.
 
+**Gradient Descent rename (v27)** — renamed the published game, generated a matching synthwave title logo, and updated active source/spec branding, share text, leaderboard label, GIF filenames, deterministic namespaces, and persistence keys. The local built export remains generated and should not be hand-edited.
+
+**Title-logo style match (v29)** — regenerated the `Gradient Descent` lettering through Phaser, then fitted the generated pixels into the original 640×159 one-line title lockup with nearest-neighbor scaling. The menu retains its original position, footprint, chunky 16-bit treatment, dark indigo edge, and vertical cyan/white/magenta band.
+
+**Slightly wider title (v30)** — widened the fitted title lettering by about 2.5% inside the same 640×159 asset canvas. Height, center point, pixel treatment, tagline clearance, and menu layout are unchanged.
+
+**10% wider title (v31)** — widened the v30 title exactly 10% to a 704×159 asset and recentered its unchanged 0.34-scale draw at x=72.32. The logo height, subtitle clearance, and menu controls remain unchanged.
+
 ## Key constants (`src/config.ts`)
 
 - Canvas `W=384 H=288` (4:3). World `x∈[-10,10] y∈[-8,8]`.
@@ -132,4 +149,4 @@ Earlier (v12): ported three feature commits from the local build into the TS sou
 
 ## Verifying you're set up
 
-`open_project` → `read_files ["engine/raster/index.md"]` → `read_files ["src/scenes/editor.ts"]` → make changes with `write_files` → `verify` (expect `218 passed, 0 failed`) → `preview` → `finish`.
+`open_project` → `read_files ["engine/raster/index.md"]` → `read_files ["src/scenes/editor.ts"]` → make changes with `write_files` → `verify` (expect `228 passed, 0 failed`) → `preview` → `finish`.
