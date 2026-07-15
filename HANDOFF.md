@@ -31,6 +31,7 @@ Engine docs live in the sandbox at `engine/raster/*.md` + `*.d.ts` — **referen
 ## Devvit Web wrapper
 
 - `src/client/index.html` + `src/client/public/content.js` are the deployed browser game. The bundle lives under `public/` so Vite copies the generated file without rewriting it.
+- Phaser's file-read response is size-capped and will silently truncate `dist/bundle.js` (currently over 270 KB). Sync large generated bundles in byte chunks, verify the final byte count, and run `npm run check:bundle`; a one-shot read caused Reddit's `Unexpected EOF` failure in v41.
 - `src/client/splash.html` is the launch/custom-post splash (its own `devvit.json` entrypoint). For custom-level posts it fetches `/api/init` and draws the authored course in the game's own pixel-art style, and its `<author>'s Level` title uses the `game-font.png` bitmap font — see "Devvit wrapper edits".
 - `src/client/public/assets/` and `src/client/public/levels.js` are copied unchanged into the client build.
 - `src/server/index.ts` hosts Devvit API and moderator post-creation endpoints.

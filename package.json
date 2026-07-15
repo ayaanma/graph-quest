@@ -7,7 +7,8 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "check": "npm run type-check && npm run format:check && npm run build",
+    "check": "npm run type-check && npm run format:check && npm run check:bundle && npm run build",
+    "check:bundle": "node --check src/client/public/content.js",
     "deploy": "npm run check && devvit upload",
     "dev": "devvit playtest",
     "format": "prettier --write .",
