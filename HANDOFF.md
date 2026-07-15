@@ -1,6 +1,6 @@
 # Gradient Descent — Agent Handoff
 
-_Last updated: 2026-07-15 · Published version: **38** · Phaser project id: `RjzqGQux4x1`_
+_Last updated: 2026-07-15 · Published version: **39** · Phaser project id: `RjzqGQux4x1`_
 
 ## TL;DR — read this first
 
@@ -24,14 +24,14 @@ All tools are prefixed `mcp__phaser-game-agent__phaser_game_agent_*` (some are d
 7. **`finish`** — pauses the sandbox to stop billing (auto-resumes on next call). Call it when done each session.
 
 **Play URL:** https://phaser.io/agent/local/RjzqGQux4x1
-**Credits:** 235 remaining (v38 left 308; a read-only session for the splash restyle used ~73). `finish` has paused the workspace and stopped idle billing.
+**Credits:** 138 remaining after the v39 session. `finish` has paused the workspace and stopped idle billing.
 
 Engine docs live in the sandbox at `engine/raster/*.md` + `*.d.ts` — **reference only, never edit** `engine/`. Start with `engine/raster/index.md`, then per-topic docs (`input.md`, `particles.md`, etc.).
 
 ## Devvit Web wrapper
 
 - `src/client/index.html` + `src/client/public/content.js` are the deployed browser game. The bundle lives under `public/` so Vite copies the generated file without rewriting it.
-- `src/client/splash.html` is the launch/custom-post splash (its own `devvit.json` entrypoint). For custom-level posts it fetches `/api/init` and draws the authored course in the game's own pixel-art style, and its `<author>'s Level` title uses the `game-font.png` bitmap font — see "Devvit wrapper edits since v38".
+- `src/client/splash.html` is the launch/custom-post splash (its own `devvit.json` entrypoint). For custom-level posts it fetches `/api/init` and draws the authored course in the game's own pixel-art style, and its `<author>'s Level` title uses the `game-font.png` bitmap font — see "Devvit wrapper edits".
 - `src/client/public/assets/` and `src/client/public/levels.js` are copied unchanged into the client build.
 - `src/server/index.ts` hosts Devvit API and moderator post-creation endpoints.
 - `src/client/share-run.ts` requests run-as-user comment consent from the trusted completion-button tap; `src/server/share-run.ts` validates the generated GIF, uploads it to Reddit media, and submits the rich-text run comment beneath a single stickied share anchor.
@@ -171,7 +171,13 @@ Earlier (v12): ported three feature commits from the local build into the TS sou
 - The Devvit server validates the GIF89a data URL and run metadata, uploads the animation to Reddit media, and submits a rich-text comment as the player containing the level and `f(x)` used. Generic run shares are replies beneath one app-created stickied anchor per post, following Reddit's score-sharing pattern.
 - The v38 Phaser bundle is synced to `src/client/public/content.js`. Phaser verification passes 236 tests; the Devvit wrapper passes type-check, formatting, and production build.
 
-## Devvit wrapper edits since v38 (local — not yet deployed)
+**HUD simplification (v39)** — removed the two optional Play top-bar controls and rebalanced the remaining run stats.
+
+- The hint `?` and CRT `#` controls, their hit targets, and the now-unreachable scanline toggle were removed from the shared Play scene, so they are absent from campaign, Daily, and custom levels.
+- The star row now right-aligns at x=374, the former CRT-control boundary beside mute. The stopwatch and best-time column shift right with it while backing off for custom levels with more than three stars.
+- The verified v39 Phaser bundle is synced to `src/client/public/content.js`. Phaser verification passes 236 tests; the generated gameplay screenshot confirms the new top-bar layout.
+
+## Devvit wrapper edits (local — not yet deployed)
 
 These touch only the local Devvit Web wrapper (`src/client/splash.html`), not the Phaser sandbox source, so they carry **no new Phaser version**. `npm run check` passes (type-check + prettier + `vite build`); ship them with `npm run deploy` / `npm run launch`. Verified by rendering the splash in headless Chrome, not yet on a live Reddit post.
 
