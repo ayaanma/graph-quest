@@ -1,6 +1,6 @@
 # Gradient Descent — Agent Handoff
 
-_Last updated: 2026-07-15 · Published version: **39** · Phaser project id: `RjzqGQux4x1`_
+_Last updated: 2026-07-15 · Published version: **40** · Phaser project id: `RjzqGQux4x1`_
 
 ## TL;DR — read this first
 
@@ -176,6 +176,12 @@ Earlier (v12): ported three feature commits from the local build into the TS sou
 - The hint `?` and CRT `#` controls, their hit targets, and the now-unreachable scanline toggle were removed from the shared Play scene, so they are absent from campaign, Daily, and custom levels.
 - The star row now right-aligns at x=374, the former CRT-control boundary beside mute. The stopwatch and best-time column shift right with it while backing off for custom levels with more than three stars.
 - The verified v39 Phaser bundle is synced to `src/client/public/content.js`. Phaser verification passes 236 tests; the generated gameplay screenshot confirms the new top-bar layout.
+
+**Persistent soundtrack (v40)** — repaired browser-gesture startup and stopped title returns from restarting the song.
+
+- Title now arms the soundtrack during setup and starts it synchronously on the first pointer/key gesture (the `PRESS TO START` interaction), satisfying browser autoplay policy.
+- A game-lifetime guard ensures `sound.music(...)` is called only once. The game-owned looping audio element therefore continues through campaign, Daily, custom, level-select, editor, game-over, and every return to Title without resetting its playback position.
+- Phaser verification passes 236 tests and v40 is published. The local generated `src/client/public/content.js` remains at v39 and must be refreshed through the normal generated-bundle sync before the next Devvit deployment; do not hand-edit it.
 
 ## Devvit wrapper edits (local — not yet deployed)
 

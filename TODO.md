@@ -6,5 +6,4 @@ To Do List:
 
 - Bug Fixes:
   - Music doesn't start playing at first
-  - Remove hints and #
   - Title doesn't appear
