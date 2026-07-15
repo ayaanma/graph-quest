@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gradient Descent</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: ui-monospace, 'SFMono-Regular', 'Cascadia Code', monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: #070914;
+      }
+
+      body {
+        display: grid;
+        place-items: center;
+      }
+
+      .launch-screen {
+        position: relative;
+        isolation: isolate;
+        display: flex;
+        width: 100%;
+        height: 100%;
+        min-height: 240px;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        padding: 24px;
+        text-align: center;
+        background:
+          linear-gradient(180deg, rgb(7 9 20 / 18%), rgb(7 9 20 / 28%)),
+          url('/assets/art/synthwave-horizon/bg-459a042e80.png') center 61% /
+            cover no-repeat;
+      }
+
+      .launch-screen::before {
+        position: absolute;
+        z-index: -1;
+        inset: 0;
+        content: '';
+        background:
+          radial-gradient(
+            circle at 50% 32%,
+            rgb(92 214 255 / 22%),
+            transparent 30%
+          ),
+          linear-gradient(
+            180deg,
+            rgb(7 9 20 / 15%) 0%,
+            rgb(7 9 20 / 5%) 55%,
+            rgb(7 9 20 / 52%) 100%
+          );
+      }
+
+      .launch-card {
+        display: flex;
+        width: min(92vw, 720px);
+        flex-direction: column;
+        align-items: center;
+        transform: translateY(-3px);
+      }
+
+      .title-logo {
+        display: block;
+        width: min(88vw, 620px);
+        height: auto;
+        image-rendering: pixelated;
+        filter: drop-shadow(0 0 5px rgb(92 214 255 / 75%))
+          drop-shadow(0 5px 0 rgb(29 12 73 / 90%));
+      }
+
+      .tagline {
+        margin: 13px 0 18px;
+        color: #d9f7ff;
+        font-size: clamp(11px, 2.5vw, 15px);
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        line-height: 1.35;
+        text-shadow: 0 0 8px rgb(92 214 255 / 90%);
+        text-transform: uppercase;
+      }
+
+      .play-button {
+        position: relative;
+        min-width: min(78vw, 280px);
+        min-height: 54px;
+        border: 2px solid #5cd6ff;
+        border-radius: 3px;
+        padding: 13px 28px;
+        color: #ffffff;
+        background: linear-gradient(180deg, #4a2a91 0%, #29145d 100%);
+        box-shadow:
+          0 0 0 2px #070914,
+          0 0 0 4px #a78bff,
+          0 0 20px rgb(92 214 255 / 65%),
+          inset 0 0 14px rgb(167 139 255 / 34%);
+        cursor: pointer;
+        font: inherit;
+        font-size: clamp(15px, 3.3vw, 19px);
+        font-weight: 900;
+        letter-spacing: 0.16em;
+        line-height: 1;
+        text-shadow: 2px 2px 0 #301071;
+        text-transform: uppercase;
+        transition:
+          transform 120ms ease,
+          filter 120ms ease;
+      }
+
+      .play-button::before {
+        margin-right: 10px;
+        color: #6cffb0;
+        content: '▶';
+        text-shadow: 0 0 8px #6cffb0;
+      }
+
+      .play-button:hover {
+        filter: brightness(1.18);
+        transform: translateY(-2px);
+      }
+
+      .play-button:focus-visible {
+        outline: 3px solid #ffffff;
+        outline-offset: 7px;
+      }
+
+      .play-button:active {
+        transform: translateY(1px);
+      }
+
+      .play-button:disabled {
+        cursor: wait;
+        filter: saturate(0.65);
+      }
+
+      .status {
+        min-height: 1.2em;
+        margin: 13px 0 0;
+        color: #ff9cab;
+        font-size: 12px;
+        font-weight: 700;
+        text-shadow: 0 1px 2px #070914;
+      }
+
+      @media (max-height: 280px) {
+        .launch-screen {
+          padding: 14px 20px;
+        }
+
+        .title-logo {
+          width: min(76vw, 500px);
+        }
+
+        .tagline {
+          margin: 8px 0 12px;
+        }
+
+        .play-button {
+          min-height: 44px;
+          padding-block: 9px;
+        }
+
+        .status {
+          margin-top: 8px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .play-button {
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="launch-screen">
+      <section class="launch-card" aria-labelledby="game-title">
+        <h1 id="game-title" hidden>Gradient Descent</h1>
+        <img
+          class="title-logo"
+          src="/assets/2Fht7XQuao/my-files/gradient-descent-title-logo-110.png"
+          alt="Gradient Descent"
+          width="704"
+          height="159"
+        />
+        <p class="tagline">Trace the function. Dodge the obstacles.</p>
+        <button class="play-button" id="play" type="button">
+          Play to start
+        </button>
+        <p class="status" id="status" role="status" aria-live="polite"></p>
+      </section>
+    </main>
+
+    <script type="module">
+      import { requestExpandedMode } from '@devvit/web/client';
+
+      const playButton = document.querySelector('#play');
+      const status = document.querySelector('#status');
+
+      playButton.addEventListener('click', (event) => {
+        playButton.disabled = true;
+        status.textContent = 'Opening game…';
+
+        try {
+          requestExpandedMode(event, 'game');
+        } catch (error) {
+          console.error('Could not open Gradient Descent', error);
+          playButton.disabled = false;
+          status.textContent = 'Could not open the game. Please try again.';
+        }
+      });
+    </script>
+  </body>
+</html>
