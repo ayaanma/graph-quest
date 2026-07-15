@@ -107,13 +107,7 @@
         display: block;
         width: 100%;
         height: auto;
-        border: 1px solid #a78bff;
-        border-radius: 0;
         background: rgb(7 9 20 / 88%);
-        box-shadow:
-          0 0 0 2px rgb(7 9 20 / 80%),
-          0 0 14px rgb(92 214 255 / 38%),
-          inset 0 0 18px rgb(167 139 255 / 12%);
         image-rendering: pixelated;
       }
 
@@ -126,7 +120,12 @@
       }
 
       .custom-level .title-logo {
-        width: min(66vw, 380px);
+        /* Cap by width AND height (both auto) so the logo keeps its aspect while
+           shrinking to fit shorter posts; full size on tall ones. */
+        width: auto;
+        height: auto;
+        max-width: min(66vw, 380px);
+        max-height: min(110px, 22vh);
       }
 
       .custom-level .tagline {
@@ -136,6 +135,16 @@
       .custom-level .level-preview {
         width: min(74vw, 360px);
         margin: 4px 0 10px;
+      }
+
+      /* Cap the preview by viewport height (keeps the 360:176 game aspect) so the
+         whole splash fits inside shorter "tall" posts instead of overflowing. */
+      .custom-level .level-canvas {
+        width: auto;
+        height: auto;
+        max-width: 100%;
+        max-height: min(177px, 36vh);
+        margin-inline: auto;
       }
 
       .custom-level .level-name {
@@ -724,6 +733,12 @@
         // start — the player ship parked on the launch pad
         const start = project(level.start.x, level.start.y);
         drawShip(ctx, start.x, start.y, 0, time);
+
+        // pixel-art frame — a crisp 1px neon edge drawn in the pixel grid, matching
+        // the game's panel strokes (no CSS border or glow, so it scales with the art)
+        ctx.strokeStyle = PREVIEW.accent2;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
       };
 
       try {
