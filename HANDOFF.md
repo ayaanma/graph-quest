@@ -24,13 +24,14 @@ All tools are prefixed `mcp__phaser-game-agent__phaser_game_agent_*` (some are d
 7. **`finish`** — pauses the sandbox to stop billing (auto-resumes on next call). Call it when done each session.
 
 **Play URL:** https://phaser.io/agent/local/RjzqGQux4x1
-**Credits:** 308 remaining after the v38 publish session (`finish` has paused the workspace and stopped idle billing).
+**Credits:** 235 remaining (v38 left 308; a read-only session for the splash restyle used ~73). `finish` has paused the workspace and stopped idle billing.
 
 Engine docs live in the sandbox at `engine/raster/*.md` + `*.d.ts` — **reference only, never edit** `engine/`. Start with `engine/raster/index.md`, then per-topic docs (`input.md`, `particles.md`, etc.).
 
 ## Devvit Web wrapper
 
 - `src/client/index.html` + `src/client/public/content.js` are the deployed browser game. The bundle lives under `public/` so Vite copies the generated file without rewriting it.
+- `src/client/splash.html` is the launch/custom-post splash (its own `devvit.json` entrypoint). For custom-level posts it fetches `/api/init` and draws the authored course in the game's own pixel-art style, and its `<author>'s Level` title uses the `game-font.png` bitmap font — see "Devvit wrapper edits since v38".
 - `src/client/public/assets/` and `src/client/public/levels.js` are copied unchanged into the client build.
 - `src/server/index.ts` hosts Devvit API and moderator post-creation endpoints.
 - `src/client/share-run.ts` requests run-as-user comment consent from the trusted completion-button tap; `src/server/share-run.ts` validates the generated GIF, uploads it to Reddit media, and submits the rich-text run comment beneath a single stickied share anchor.
@@ -169,6 +170,18 @@ Earlier (v12): ported three feature commits from the local build into the TS sou
 - The completed function is replayed at 10 fps and encoded in-browser, but the capture is now exactly 384×204: the top bar and full graph ending immediately above the in-game function panel. The recorded final time stays fixed at the top-right for every frame; the hamburger, hint, CRT `#`, mute, best-time, and star HUD are all omitted.
 - The Devvit server validates the GIF89a data URL and run metadata, uploads the animation to Reddit media, and submits a rich-text comment as the player containing the level and `f(x)` used. Generic run shares are replies beneath one app-created stickied anchor per post, following Reddit's score-sharing pattern.
 - The v38 Phaser bundle is synced to `src/client/public/content.js`. Phaser verification passes 236 tests; the Devvit wrapper passes type-check, formatting, and production build.
+
+## Devvit wrapper edits since v38 (local — not yet deployed)
+
+These touch only the local Devvit Web wrapper (`src/client/splash.html`), not the Phaser sandbox source, so they carry **no new Phaser version**. `npm run check` passes (type-check + prettier + `vite build`); ship them with `npm run deploy` / `npm run launch`. Verified by rendering the splash in headless Chrome, not yet on a live Reddit post.
+
+**Custom-post splash preview now matches the game's pixel art (2026-07-15).** The authored-level preview on the custom-post splash was rewritten to render like the game's Play-scene graph instead of a flat, straight-on vector sketch.
+
+- Ports the game's `worldToScreen` projection (`PERSP_FAR=0.35`) so the preview uses the same tilted 2.5D grid — wide near the bottom, foreshortened toward a top horizon — over a deep-indigo sky gradient + faint starfield.
+- Draws every element as the game does: obstacles as projected polygons with the subtle `obFill`/`obEdge` (circles via the 28-point `obstacleOutline`), floating gold diamond stars with twinkling cores, the shared neon ship glyph (`drawShip`) parked at the start, and the mint planet goal with a pulsing orbit ring.
+- Renders into a native **360×176** canvas (the game's `GRAPH` rect) upscaled with `image-rendering: pixelated`, mirroring the game's `scaling: 'pixel'`; square canvas corners. Driven by the existing splash rAF loop, so stars twinkle/bob, the goal pulses and the thruster flickers (static under `prefers-reduced-motion`). The `/api/init` `customLevel.level` data contract is unchanged.
+
+**Splash title switched to the bitmap font (2026-07-15).** The `<author>'s Level` heading above the preview was converted from CSS `<h2>` text to a `.bitmap-text` canvas drawn from `game-font.png` at **variant 2** — the exact glyphs/color the in-game top bar uses for the same heading — and its cyan text-shadow glow was removed. Its width is set to `text.length * 16` (2× the 8px cells) with `max-width: 100%`, so long names scale down proportionally without distortion.
 
 ## Key constants (`src/config.ts`)
 

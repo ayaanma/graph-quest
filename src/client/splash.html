@@ -95,12 +95,12 @@
       }
 
       .level-name {
-        margin: 0 0 5px;
-        color: #ffffff;
-        font-size: clamp(12px, 2.7vw, 16px);
-        letter-spacing: 0.08em;
-        line-height: 1.1;
-        text-shadow: 0 0 8px rgb(92 214 255 / 90%);
+        display: block;
+        width: auto;
+        height: auto;
+        max-width: 100%;
+        margin: 0 auto 6px;
+        image-rendering: pixelated;
       }
 
       .level-canvas {
@@ -108,7 +108,7 @@
         width: 100%;
         height: auto;
         border: 1px solid #a78bff;
-        border-radius: 3px;
+        border-radius: 0;
         background: rgb(7 9 20 / 88%);
         box-shadow:
           0 0 0 2px rgb(7 9 20 / 80%),
@@ -139,8 +139,7 @@
       }
 
       .custom-level .level-name {
-        margin-bottom: 3px;
-        font-size: clamp(12px, 2.4vw, 14px);
+        margin-bottom: 4px;
       }
 
       .custom-level .status {
@@ -243,12 +242,20 @@
           height="159"
         />
         <section class="level-preview" id="level-preview" hidden>
-          <h2 class="level-name" id="level-name"></h2>
+          <canvas
+            class="bitmap-text level-name"
+            id="level-name"
+            data-variant="2"
+            width="8"
+            height="8"
+            role="img"
+            aria-label="Custom level"
+          ></canvas>
           <canvas
             class="level-canvas"
             id="level-canvas"
-            width="720"
-            height="220"
+            width="360"
+            height="176"
             aria-label="Custom level preview"
           ></canvas>
         </section>
@@ -396,12 +403,16 @@
       const reduceMotion = window.matchMedia(
         '(prefers-reduced-motion: reduce)',
       ).matches;
-      const backdropStart = performance.now();
-      const animateMenuBackdrop = (now) => {
-        drawMenuBackdrop(reduceMotion ? 0 : (now - backdropStart) / 1000);
-        if (!reduceMotion) requestAnimationFrame(animateMenuBackdrop);
+      // The authored course to preview, set once /api/init resolves for a custom post.
+      let previewLevel = null;
+      const sceneStart = performance.now();
+      const renderScene = (now) => {
+        const t = reduceMotion ? 0 : (now - sceneStart) / 1000;
+        drawMenuBackdrop(t);
+        if (previewLevel) drawLevelPreview(previewLevel, t);
+        if (!reduceMotion) requestAnimationFrame(renderScene);
       };
-      requestAnimationFrame(animateMenuBackdrop);
+      requestAnimationFrame(renderScene);
 
       const gameFont = new Image();
       const drawBitmapText = (canvas) => {
@@ -440,106 +451,279 @@
       });
       gameFont.src = '/assets/ui/game-font.png';
 
-      const drawLevelPreview = (level) => {
-        const ctx = levelCanvas.getContext('2d');
-        const width = levelCanvas.width;
-        const height = levelCanvas.height;
-        const pad = 18;
-        const sx = (x) => pad + ((x + 10) / 20) * (width - pad * 2);
-        const sy = (y) => pad + ((8 - y) / 16) * (height - pad * 2);
+      // ── Custom-level preview ──────────────────────────────────────────────
+      // Render the authored course the way the game's Play scene draws its graph:
+      // the same 2.5D worldToScreen tilt, neon palette, ship glyph, diamond stars
+      // and planet goal, into a native-resolution canvas that CSS upscales with
+      // nearest-neighbour so it reads as the game's crisp pixel art.
+      const GRAPH = { w: 360, h: 176 }; // graph viewport size (game src/config.ts)
+      const X_MIN = -10,
+        X_MAX = 10,
+        Y_MIN = -8,
+        Y_MAX = 8;
+      const PERSP_FAR = 0.35,
+        GRID_STEP = 2,
+        GOAL_TOL = 0.4;
+      const PREVIEW = {
+        grid: 'rgba(122,150,220,0.09)',
+        gridAxis: 'rgba(150,178,240,0.26)',
+        accent: '#5cd6ff',
+        accent2: '#a78bff',
+        goal: '#6cffb0',
+        star: '#ffd86b',
+        obFill: 'rgba(255,107,107,0.09)',
+        obEdge: 'rgba(255,130,120,0.5)',
+      };
+      const invDepth = (v) => 1 / (1 + PERSP_FAR * v);
+      const NEAR = invDepth(0);
+      const FARD = invDepth(1);
+      // worldToScreen (game src/logic/projection.ts) in graph-local pixels: near
+      // rows (low y) are wide, far rows foreshorten toward a horizon near the top.
+      const project = (wx, wy) => {
+        const u = (wx - X_MIN) / (X_MAX - X_MIN);
+        const v = (wy - Y_MIN) / (Y_MAX - Y_MIN);
+        const id = invDepth(v);
+        const rowFrac = (NEAR - id) / (NEAR - FARD);
+        return {
+          x: GRAPH.w / 2 + (u - 0.5) * GRAPH.w * id,
+          y: GRAPH.h - rowFrac * GRAPH.h,
+        };
+      };
 
-        ctx.clearRect(0, 0, width, height);
-        ctx.fillStyle = '#070914';
-        ctx.fillRect(0, 0, width, height);
-
-        ctx.lineWidth = 1;
-        for (let x = -10; x <= 10; x += 2) {
-          ctx.strokeStyle = x === 0 ? '#4c5880' : '#242a4a';
-          ctx.beginPath();
-          ctx.moveTo(sx(x), sy(-8));
-          ctx.lineTo(sx(x), sy(8));
-          ctx.stroke();
-        }
-        for (let y = -8; y <= 8; y += 2) {
-          ctx.strokeStyle = y === 0 ? '#4c5880' : '#242a4a';
-          ctx.beginPath();
-          ctx.moveTo(sx(-10), sy(y));
-          ctx.lineTo(sx(10), sy(y));
-          ctx.stroke();
-        }
-
-        ctx.fillStyle = 'rgb(255 107 122 / 30%)';
-        ctx.strokeStyle = '#ff6b7a';
-        ctx.lineWidth = 2;
-        for (const obstacle of level.obstacles) {
-          ctx.beginPath();
-          if (obstacle.kind === 'circle') {
-            ctx.ellipse(
-              sx(obstacle.center.x),
-              sy(obstacle.center.y),
-              (obstacle.radius / 20) * (width - pad * 2),
-              (obstacle.radius / 16) * (height - pad * 2),
-              0,
-              0,
-              Math.PI * 2,
-            );
-          } else if (obstacle.kind === 'triangle') {
-            obstacle.vertices.forEach((point, index) => {
-              if (index === 0) ctx.moveTo(sx(point.x), sy(point.y));
-              else ctx.lineTo(sx(point.x), sy(point.y));
-            });
-            ctx.closePath();
-          } else {
-            ctx.rect(
-              sx(obstacle.x0),
-              sy(obstacle.y1),
-              sx(obstacle.x1) - sx(obstacle.x0),
-              sy(obstacle.y0) - sy(obstacle.y1),
-            );
-          }
-          ctx.fill();
-          ctx.stroke();
-        }
-
-        for (const star of level.stars) {
-          const x = sx(star.x);
-          const y = sy(star.y);
-          ctx.fillStyle = '#ffd86b';
-          ctx.beginPath();
-          ctx.moveTo(x, y - 6);
-          ctx.lineTo(x + 6, y);
-          ctx.lineTo(x, y + 6);
-          ctx.lineTo(x - 6, y);
-          ctx.closePath();
-          ctx.fill();
-        }
-
-        const startX = sx(level.start.x);
-        const startY = sy(level.start.y);
-        ctx.fillStyle = '#5cd6ff';
-        ctx.strokeStyle = '#ffffff';
+      const strokeSeg = (ctx, ax, ay, bx, by, stroke, width) => {
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = width;
         ctx.beginPath();
-        ctx.moveTo(startX + 8, startY);
-        ctx.lineTo(startX - 6, startY - 6);
-        ctx.lineTo(startX - 3, startY);
-        ctx.lineTo(startX - 6, startY + 6);
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(bx, by);
+        ctx.stroke();
+      };
+      const fillDisc = (ctx, x, y, radius, fill) => {
+        ctx.fillStyle = fill;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      };
+      const strokeRing = (ctx, x, y, radius, stroke, width) => {
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = width;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.stroke();
+      };
+      const fillStrokePoly = (ctx, points, fill, stroke, width) => {
+        ctx.beginPath();
+        points.forEach((p, i) =>
+          i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y),
+        );
         ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
+        if (fill) {
+          ctx.fillStyle = fill;
+          ctx.fill();
+        }
+        if (stroke) {
+          ctx.strokeStyle = stroke;
+          ctx.lineWidth = width;
+          ctx.stroke();
+        }
+      };
+      const diamond = (ctx, cx, cy, s, fill, edge) => {
+        const inr = s * 0.4;
+        fillStrokePoly(
+          ctx,
+          [
+            { x: cx, y: cy - s },
+            { x: cx + inr, y: cy - inr },
+            { x: cx + s, y: cy },
+            { x: cx + inr, y: cy + inr },
+            { x: cx, y: cy + s },
+            { x: cx - inr, y: cy + inr },
+            { x: cx - s, y: cy },
+            { x: cx - inr, y: cy - inr },
+          ],
+          fill,
+          edge,
+          1,
+        );
+      };
+      // The player-ship glyph (game src/scenes/ship.ts): a neon dart with twin
+      // fins, a cockpit and a pulsing thruster flame.
+      const drawShip = (ctx, cx, cy, angle, time) => {
+        const pulse = 0.5 + 0.5 * Math.sin(time * 7);
+        const cos = Math.cos(angle),
+          sin = Math.sin(angle);
+        const p = (h, l) => ({
+          x: cx + h * cos - l * sin,
+          y: cy + h * sin + l * cos,
+        });
+        const hull = [
+          p(-6, -2),
+          p(-1, -3),
+          p(7, 0),
+          p(-1, 3),
+          p(-6, 2),
+          p(-4, 0),
+        ];
+        const finTop = [p(-4, -2), p(-7, -6), p(2, -3), p(1, -2)];
+        const finBot = [p(-4, 2), p(-7, 6), p(2, 3), p(1, 2)];
+        const flameTip = p(-10 - pulse * 2, 0),
+          engine = p(-5, 0),
+          flameCore = p(-9 - pulse * 2, 0);
+        const cockpit = p(1, 0),
+          ventA = p(-5, -1),
+          ventB = p(-5, 1);
+        fillDisc(ctx, cx, cy, 7 + pulse, 'rgba(92,214,255,0.08)');
+        strokeSeg(
+          ctx,
+          flameTip.x,
+          flameTip.y,
+          engine.x,
+          engine.y,
+          'rgba(92,214,255,0.35)',
+          3,
+        );
+        strokeSeg(
+          ctx,
+          flameCore.x,
+          flameCore.y,
+          engine.x,
+          engine.y,
+          PREVIEW.accent,
+          1,
+        );
+        fillStrokePoly(ctx, finTop, '#d8f6ff', PREVIEW.accent2, 1);
+        fillStrokePoly(ctx, finBot, '#d8f6ff', PREVIEW.accent2, 1);
+        fillStrokePoly(ctx, hull, '#f8fcff', PREVIEW.accent2, 1);
+        fillDisc(ctx, cockpit.x, cockpit.y, 1.5, PREVIEW.accent);
+        strokeRing(ctx, cockpit.x, cockpit.y, 1.5, '#ffffff', 1);
+        strokeSeg(
+          ctx,
+          ventA.x,
+          ventA.y,
+          ventB.x,
+          ventB.y,
+          'rgba(72,117,153,0.8)',
+          1,
+        );
+      };
+      // Ordered world-space boundary (game src/logic/obstacles.ts) for projection.
+      const obstacleOutline = (o) => {
+        if (o.kind === 'circle') {
+          const steps = 28,
+            points = [];
+          for (let i = 0; i < steps; i += 1) {
+            const a = -Math.PI / 2 + (i * Math.PI * 2) / steps;
+            points.push({
+              x: o.center.x + Math.cos(a) * o.radius,
+              y: o.center.y + Math.sin(a) * o.radius,
+            });
+          }
+          return points;
+        }
+        if (o.kind === 'triangle')
+          return o.vertices.map((p) => ({ x: p.x, y: p.y }));
+        return [
+          { x: o.x0, y: o.y1 },
+          { x: o.x1, y: o.y1 },
+          { x: o.x1, y: o.y0 },
+          { x: o.x0, y: o.y0 },
+        ];
+      };
 
-        const goalX = sx(level.goal.x);
-        const goalY = sy(level.goal.y);
-        ctx.fillStyle = 'rgb(108 255 176 / 22%)';
-        ctx.strokeStyle = '#6cffb0';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(goalX, goalY, 10, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        ctx.fillStyle = '#6cffb0';
-        ctx.beginPath();
-        ctx.arc(goalX, goalY, 4, 0, Math.PI * 2);
-        ctx.fill();
+      // A faint static starfield behind the grid, echoing the game's sky backdrop.
+      const previewStars = [];
+      let previewSeed = 0x9e3779b9;
+      const previewRandom = () => {
+        previewSeed = (Math.imul(previewSeed, 1664525) + 1013904223) >>> 0;
+        return previewSeed / 4294967296;
+      };
+      for (let i = 0; i < 26; i += 1) {
+        previewStars.push({
+          x: Math.floor(previewRandom() * GRAPH.w),
+          y: Math.floor(previewRandom() * GRAPH.h),
+          alpha: 0.1 + previewRandom() * 0.16,
+          size: previewRandom() < 0.28 ? 2 : 1,
+        });
+      }
+
+      const drawLevelPreview = (level, time) => {
+        const ctx = levelCanvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        const w = GRAPH.w,
+          h = GRAPH.h;
+
+        // deep-indigo sky, matching the game's backdrop behind the graph
+        const sky = ctx.createLinearGradient(0, 0, 0, h);
+        sky.addColorStop(0, '#0a0f24');
+        sky.addColorStop(0.55, '#070a18');
+        sky.addColorStop(1, '#04050d');
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = '#9fb2e8';
+        for (const st of previewStars) {
+          ctx.globalAlpha = st.alpha;
+          ctx.fillRect(st.x, st.y, st.size, st.size);
+        }
+        ctx.globalAlpha = 1;
+
+        // tilted grid — horizontal rows, then perspective-fanned columns
+        for (let y = Y_MIN; y <= Y_MAX + 1e-9; y += GRID_STEP) {
+          const aL = project(X_MIN, y),
+            aR = project(X_MAX, y);
+          const axis = Math.abs(y) < 1e-6;
+          strokeSeg(
+            ctx,
+            aL.x,
+            aL.y,
+            aR.x,
+            aR.y,
+            axis ? PREVIEW.gridAxis : PREVIEW.grid,
+            1,
+          );
+        }
+        for (let x = X_MIN; x <= X_MAX + 1e-9; x += GRID_STEP) {
+          const col = Math.abs(x) < 1e-6 ? PREVIEW.gridAxis : PREVIEW.grid;
+          let prev = project(x, Y_MIN);
+          for (let y = Y_MIN + 1; y <= Y_MAX + 1e-9; y += 1) {
+            const cur = project(x, y);
+            strokeSeg(ctx, prev.x, prev.y, cur.x, cur.y, col, 1);
+            prev = cur;
+          }
+        }
+
+        for (const o of level.obstacles) {
+          const poly = obstacleOutline(o).map((pt) => project(pt.x, pt.y));
+          fillStrokePoly(ctx, poly, PREVIEW.obFill, PREVIEW.obEdge, 1);
+        }
+
+        // stars — floating diamonds with a twinkling core (game lifts them +0.35)
+        level.stars.forEach((s, i) => {
+          const twinkle = 0.5 + 0.5 * Math.sin(time * 3 + i * 1.7);
+          const bob = Math.sin(time * 2 + i * 1.3) * 0.16;
+          const p = project(s.x, s.y + bob + 0.35);
+          diamond(ctx, p.x, p.y, 3.2, 'rgba(255,216,107,0.12)', PREVIEW.star);
+          fillDisc(ctx, p.x, p.y, 0.8 + twinkle * 0.5, PREVIEW.star);
+        });
+
+        // goal — a small planet with a pulsing orbit ring
+        const g = project(level.goal.x, level.goal.y);
+        const gr = project(level.goal.x + GOAL_TOL, level.goal.y);
+        const rad = Math.max(3, Math.abs(gr.x - g.x));
+        const pulse = 0.5 + 0.5 * Math.sin(time * 3);
+        strokeRing(ctx, g.x, g.y, rad + 1.5 + pulse * 2, PREVIEW.goal, 1);
+        fillDisc(ctx, g.x, g.y, rad * 0.7 + 1, 'rgba(108,255,176,0.16)');
+        fillDisc(ctx, g.x, g.y, Math.max(1.6, rad * 0.5), PREVIEW.goal);
+        fillDisc(
+          ctx,
+          g.x - rad * 0.28,
+          g.y - rad * 0.3,
+          Math.max(0.7, rad * 0.24),
+          'rgba(214,255,235,0.5)',
+        );
+
+        // start — the player ship parked on the launch pad
+        const start = project(level.start.x, level.start.y);
+        drawShip(ctx, start.x, start.y, 0, time);
       };
 
       try {
@@ -547,12 +731,16 @@
         if (response.ok) {
           const { customLevel } = await response.json();
           if (customLevel?.level && customLevel.author) {
-            levelName.textContent = `${customLevel.author}'s Level`;
+            const heading = `${customLevel.author}'s Level`;
+            setBitmapText(levelName, heading);
+            levelName.style.width = heading.length * 16 + 'px'; // 2× the 8px cells
+            levelName.setAttribute('aria-label', heading);
             levelCanvas.setAttribute(
               'aria-label',
               `${customLevel.author}'s custom level preview`,
             );
-            drawLevelPreview(customLevel.level);
+            previewLevel = customLevel.level;
+            drawLevelPreview(previewLevel, 0);
             levelPreview.hidden = false;
             launchScreen.classList.add('custom-level');
             setBitmapText(playButtonLabel, 'LAUNCH LEVEL');
