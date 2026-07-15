@@ -21,6 +21,7 @@ type UploadResponse = {
 };
 
 let initialLevel: PublishedCustomLevel | null = null;
+let initialDailyDay: string | null = null;
 let uploadEvent: Event | null = null;
 
 window.addEventListener(
@@ -60,9 +61,16 @@ export const gradientDescentCustomLevels = {
   upload,
 };
 
+export const gradientDescentScheduledDaily = {
+  initial: (): { day: string } | null =>
+    initialDailyDay ? { day: initialDailyDay } : null,
+};
+
 declare global {
   var GradientDescentCustomLevels:
     typeof gradientDescentCustomLevels | undefined;
+  var GradientDescentScheduledDaily:
+    typeof gradientDescentScheduledDaily | undefined;
 }
 
 export async function initializeCustomLevels(): Promise<void> {
@@ -70,8 +78,11 @@ export async function initializeCustomLevels(): Promise<void> {
   if (!response.ok) return;
   const body = (await response.json()) as {
     customLevel?: PublishedCustomLevel | null;
+    dailyDay?: string | null;
   };
   initialLevel = body.customLevel ?? null;
+  initialDailyDay = body.dailyDay ?? null;
 }
 
 globalThis.GradientDescentCustomLevels = gradientDescentCustomLevels;
+globalThis.GradientDescentScheduledDaily = gradientDescentScheduledDaily;

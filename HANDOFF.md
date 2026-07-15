@@ -39,6 +39,13 @@ Engine docs live in the sandbox at `engine/raster/*.md` + `*.d.ts` — **referen
 - `npm run check` type-checks, formats-checks, and builds; `npm run dev` starts a Reddit playtest; `npm run deploy` uploads a private build; `npm run launch` submits it for review.
 - Before first-time registration, `devvit.json` intentionally uses the official `<% name %>` placeholder. Run `npx devvit init` without `--force`, request `gradient-descent` if available, and let the CLI synchronize the registered slug into `devvit.json` and `package.json`.
 
+### Scheduled UTC daily posts
+
+- `devvit.json` runs `publish-daily-level` at `00:00 UTC` (`0 0 * * *`). The handler creates an app-owned custom post titled `Daily #{count} - YYYY-MM-DD`, pins it in slot 1, and unpins the prior app-created daily.
+- Daily numbering is inclusive from the feature's conception on `2026-07-14` (`Daily #1`). `src/server/daily-post.ts` owns this epoch and the UTC date/count helpers.
+- Redis stores one post id per UTC day and a short creation lock, so scheduler retries reuse and re-pin the existing post instead of duplicating it.
+- Scheduled posts carry `{ kind: "daily", day: "YYYY-MM-DD" }` in `postData`. `/api/init` exposes that frozen day and the Phaser host adapter auto-opens that seed once. This is separate from, and does not change, the existing local-midnight Daily button.
+
 ## Source layout (in the sandbox, under `src/`)
 
 ```

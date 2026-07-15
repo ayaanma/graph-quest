@@ -25,6 +25,8 @@ import {
   recordDailyPlay,
 } from './daily-streak.js';
 import { commentSharedRun, normalizeShareRun } from './share-run.js';
+import { publishUtcDaily } from './daily-post.js';
+import type { TaskRequest, TaskResponse } from '@devvit/web/server';
 
 const app = new Hono();
 
@@ -38,12 +40,21 @@ app.get('/api/health', (c) =>
 app.get('/api/init', async (c) => {
   const username = await reddit.getCurrentUsername();
   const customLevelPost = readCustomLevelPostData(context.postData);
+  const dailyDay =
+    context.postData &&
+    typeof context.postData === 'object' &&
+    context.postData.kind === 'daily' &&
+    typeof context.postData.day === 'string' &&
+    /^\d{4}-\d{2}-\d{2}$/.test(context.postData.day)
+      ? context.postData.day
+      : null;
 
   return c.json({
     postId: context.postId ?? null,
     subredditName: context.subredditName ?? null,
     userId: context.userId ?? null,
     username: username ?? null,
+    dailyDay,
     customLevel:
       customLevelPost && context.postId
         ? {
@@ -269,6 +280,14 @@ app.post('/internal/menu/post-create', async (c) => {
       400,
     );
   }
+});
+
+app.post('/internal/scheduler/daily-post', async (c) => {
+  await c.req.json<TaskRequest>();
+  if (!context.subredditName)
+    throw new Error('Scheduled daily has no subreddit context');
+  await publishUtcDaily(context.subredditName);
+  return c.json<TaskResponse>({}, 200);
 });
 
 serve({

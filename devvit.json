@@ -36,6 +36,14 @@
       }
     ]
   },
+  "scheduler": {
+    "tasks": {
+      "publish-daily-level": {
+        "endpoint": "/internal/scheduler/daily-post",
+        "cron": "0 0 * * *"
+      }
+    }
+  },
   "scripts": {
     "build": "vite build",
     "dev": "vite build --watch"
