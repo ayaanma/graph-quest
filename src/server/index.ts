@@ -19,6 +19,11 @@ import {
   normalizeCustomLevel,
   readCustomLevelPostData,
 } from './custom-levels.js';
+import {
+  getDailyStreak,
+  isCurrentLocalDay,
+  recordDailyPlay,
+} from './daily-streak.js';
 
 const app = new Hono();
 
@@ -47,6 +52,44 @@ app.get('/api/init', async (c) => {
           }
         : null,
   });
+});
+
+app.get('/api/daily-streak', async (c) => {
+  const day = c.req.query('day');
+  if (!day || !isCurrentLocalDay(day)) {
+    return c.json({ error: 'Invalid daily streak date' }, 400);
+  }
+
+  if (!context.userId) {
+    return c.json({ count: 0, recordedToday: false, authenticated: false });
+  }
+
+  const streak = await getDailyStreak(context.userId, day);
+  return c.json({ ...streak, authenticated: true });
+});
+
+app.post('/api/daily-streak', async (c) => {
+  if (!context.userId) {
+    return c.json({ error: 'Sign in to Reddit to track a daily streak' }, 401);
+  }
+
+  let body: unknown;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Request body must be valid JSON' }, 400);
+  }
+
+  const day =
+    body && typeof body === 'object'
+      ? (body as Record<string, unknown>).day
+      : null;
+  if (typeof day !== 'string' || !isCurrentLocalDay(day)) {
+    return c.json({ error: 'Invalid daily streak date' }, 400);
+  }
+
+  const streak = await recordDailyPlay(context.userId, day);
+  return c.json({ ...streak, authenticated: true });
 });
 
 app.post('/api/custom-levels', async (c) => {

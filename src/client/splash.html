@@ -8,6 +8,8 @@
       :root {
         color-scheme: dark;
         font-family: ui-monospace, 'SFMono-Regular', 'Cascadia Code', monospace;
+        --space: #050612;
+        --cyan: #5cd6ff;
       }
 
       * {
@@ -20,7 +22,7 @@
         height: 100%;
         margin: 0;
         overflow: hidden;
-        background: #070914;
+        background: var(--space);
       }
 
       body {
@@ -40,32 +42,23 @@
         overflow: hidden;
         padding: 24px;
         text-align: center;
-        background:
-          linear-gradient(180deg, rgb(7 9 20 / 18%), rgb(7 9 20 / 28%)),
-          url('/assets/art/synthwave-horizon/bg-459a042e80.png') center 61% /
-            cover no-repeat;
+        background: #05060f;
       }
 
-      .launch-screen::before {
+      .menu-backdrop {
         position: absolute;
-        z-index: -1;
+        z-index: 0;
         inset: 0;
-        content: '';
-        background:
-          radial-gradient(
-            circle at 50% 32%,
-            rgb(92 214 255 / 22%),
-            transparent 30%
-          ),
-          linear-gradient(
-            180deg,
-            rgb(7 9 20 / 15%) 0%,
-            rgb(7 9 20 / 5%) 55%,
-            rgb(7 9 20 / 52%) 100%
-          );
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        pointer-events: none;
+        image-rendering: pixelated;
       }
 
       .launch-card {
+        position: relative;
+        z-index: 2;
         display: flex;
         width: min(92vw, 720px);
         flex-direction: column;
@@ -78,19 +71,18 @@
         width: min(88vw, 620px);
         height: auto;
         image-rendering: pixelated;
-        filter: drop-shadow(0 0 5px rgb(92 214 255 / 75%))
-          drop-shadow(0 5px 0 rgb(29 12 73 / 90%));
+      }
+
+      .bitmap-text {
+        display: block;
+        image-rendering: crisp-edges;
+        image-rendering: pixelated;
       }
 
       .tagline {
-        margin: 13px 0 18px;
-        color: #d9f7ff;
-        font-size: clamp(11px, 2.5vw, 15px);
-        font-weight: 700;
-        letter-spacing: 0.16em;
-        line-height: 1.35;
-        text-shadow: 0 0 8px rgb(92 214 255 / 90%);
-        text-transform: uppercase;
+        width: min(82vw, 496px);
+        height: auto;
+        margin: 11px 0 21px;
       }
 
       .level-preview {
@@ -151,51 +143,36 @@
         font-size: clamp(12px, 2.4vw, 14px);
       }
 
-      .custom-level .play-button {
-        min-height: 44px;
-        padding-block: 9px;
-      }
-
       .custom-level .status {
         margin-top: 8px;
       }
 
       .play-button {
         position: relative;
-        min-width: min(78vw, 280px);
-        min-height: 54px;
-        border: 2px solid #5cd6ff;
-        border-radius: 3px;
-        padding: 13px 28px;
-        color: #ffffff;
-        background: linear-gradient(180deg, #4a2a91 0%, #29145d 100%);
-        box-shadow:
-          0 0 0 2px #070914,
-          0 0 0 4px #a78bff,
-          0 0 20px rgb(92 214 255 / 65%),
-          inset 0 0 14px rgb(167 139 255 / 34%);
+        display: grid;
+        width: min(82vw, 320px);
+        height: 40px;
+        place-items: center;
+        border: 2px solid rgb(130 142 175 / 42%);
+        border-radius: 0;
+        padding: 0;
+        background: rgb(255 255 255 / 3.5%);
         cursor: pointer;
-        font: inherit;
-        font-size: clamp(15px, 3.3vw, 19px);
-        font-weight: 900;
-        letter-spacing: 0.16em;
-        line-height: 1;
-        text-shadow: 2px 2px 0 #301071;
-        text-transform: uppercase;
         transition:
           transform 120ms ease,
-          filter 120ms ease;
+          background-color 120ms ease,
+          border-color 120ms ease;
       }
 
-      .play-button::before {
-        margin-right: 10px;
-        color: #6cffb0;
-        content: '▶';
-        text-shadow: 0 0 8px #6cffb0;
+      .button-label {
+        width: auto;
+        height: 16px;
+        max-width: calc(100% - 24px);
       }
 
       .play-button:hover {
-        filter: brightness(1.18);
+        border-color: var(--cyan);
+        background: rgb(255 255 255 / 7%);
         transform: translateY(-2px);
       }
 
@@ -210,7 +187,7 @@
 
       .play-button:disabled {
         cursor: wait;
-        filter: saturate(0.65);
+        opacity: 0.65;
       }
 
       .status {
@@ -235,11 +212,6 @@
           margin: 8px 0 12px;
         }
 
-        .play-button {
-          min-height: 44px;
-          padding-block: 9px;
-        }
-
         .status {
           margin-top: 8px;
         }
@@ -254,6 +226,13 @@
   </head>
   <body>
     <main class="launch-screen">
+      <canvas
+        class="menu-backdrop"
+        id="menu-backdrop"
+        width="384"
+        height="288"
+        aria-hidden="true"
+      ></canvas>
       <section class="launch-card" aria-labelledby="game-title">
         <h1 id="game-title" hidden>Gradient Descent</h1>
         <img
@@ -273,9 +252,29 @@
             aria-label="Custom level preview"
           ></canvas>
         </section>
-        <p class="tagline">Trace the function. Dodge the obstacles.</p>
-        <button class="play-button" id="play" type="button">
-          Play to start
+        <canvas
+          class="bitmap-text tagline"
+          data-text="trace the function to the stars"
+          data-variant="4"
+          width="248"
+          height="8"
+          role="img"
+          aria-label="Trace the function to the stars"
+        ></canvas>
+        <button
+          class="play-button"
+          id="play"
+          type="button"
+          aria-label="Press to start"
+        >
+          <canvas
+            class="bitmap-text button-label"
+            data-text="PRESS TO START"
+            data-variant="8"
+            width="112"
+            height="8"
+            aria-hidden="true"
+          ></canvas>
         </button>
         <p class="status" id="status" role="status" aria-live="polite"></p>
       </section>
@@ -285,11 +284,161 @@
       import { requestExpandedMode } from '@devvit/web/client';
 
       const playButton = document.querySelector('#play');
+      const playButtonLabel = document.querySelector('.button-label');
       const status = document.querySelector('#status');
       const launchScreen = document.querySelector('.launch-screen');
       const levelPreview = document.querySelector('#level-preview');
       const levelName = document.querySelector('#level-name');
       const levelCanvas = document.querySelector('#level-canvas');
+      const menuBackdrop = document.querySelector('#menu-backdrop');
+
+      const backdropCtx = menuBackdrop.getContext('2d');
+      const backdropStars = [];
+      let starSeed = 0x47524144;
+      const random = () => {
+        starSeed = (Math.imul(starSeed, 1664525) + 1013904223) >>> 0;
+        return starSeed / 4294967296;
+      };
+      for (let layer = 0; layer < 3; layer += 1) {
+        for (let index = 0; index < 20; index += 1) {
+          backdropStars.push({
+            x: random() * 384,
+            y: random() * 288,
+            layer,
+          });
+        }
+      }
+
+      const drawPuff = (ctx, cx, cy, radius, red, green, blue) => {
+        const rings = 7;
+        for (let index = rings; index >= 1; index -= 1) {
+          const ringRadius = (radius * index) / rings;
+          const alpha = 0.05 * (1 - index / rings) + 0.015;
+          ctx.fillStyle = `rgba(${red}, ${green}, ${blue}, ${alpha.toFixed(3)})`;
+          ctx.beginPath();
+          ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      };
+
+      const drawCircle = (ctx, x, y, radius, fill, stroke) => {
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        if (fill) {
+          ctx.fillStyle = fill;
+          ctx.fill();
+        }
+        if (stroke) {
+          ctx.strokeStyle = stroke;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      };
+
+      const drawMenuBackdrop = (time = 0) => {
+        const gradient = backdropCtx.createLinearGradient(0, 0, 0, 288);
+        gradient.addColorStop(0, '#0a0f24');
+        gradient.addColorStop(0.55, '#070a18');
+        gradient.addColorStop(1, '#04050d');
+        backdropCtx.fillStyle = gradient;
+        backdropCtx.fillRect(0, 0, 384, 288);
+
+        backdropCtx.fillStyle = '#9fb2e8';
+        for (const star of backdropStars) {
+          const depth = star.layer + 1;
+          const y = (star.y + time * 2.5 * depth * 0.32) % 288;
+          backdropCtx.globalAlpha = 0.28 + depth * 0.18;
+          const size = depth === 3 ? 2 : 1;
+          backdropCtx.fillRect(Math.round(star.x), Math.round(y), size, size);
+        }
+        backdropCtx.globalAlpha = 1;
+
+        drawPuff(
+          backdropCtx,
+          384 * 0.24 + Math.sin(time * 0.1) * 6,
+          288 * 0.34,
+          74,
+          124,
+          92,
+          220,
+        );
+        drawPuff(
+          backdropCtx,
+          384 * 0.8 + Math.cos(time * 0.08) * 6,
+          288 * 0.6,
+          88,
+          58,
+          120,
+          214,
+        );
+
+        const planetX = 384 * 0.15;
+        const planetY = 288 * 0.74 + Math.sin(time * 0.6) * 2;
+        drawCircle(
+          backdropCtx,
+          planetX,
+          planetY,
+          17,
+          null,
+          'rgba(122,150,220,0.22)',
+        );
+        drawCircle(backdropCtx, planetX, planetY, 14, 'rgba(88,140,220,0.10)');
+        drawCircle(backdropCtx, planetX, planetY, 12, '#3a63b8');
+        drawCircle(
+          backdropCtx,
+          planetX - 12 * 0.32,
+          planetY - 12 * 0.34,
+          12 * 0.3,
+          'rgba(190,215,255,0.4)',
+        );
+      };
+
+      const reduceMotion = window.matchMedia(
+        '(prefers-reduced-motion: reduce)',
+      ).matches;
+      const backdropStart = performance.now();
+      const animateMenuBackdrop = (now) => {
+        drawMenuBackdrop(reduceMotion ? 0 : (now - backdropStart) / 1000);
+        if (!reduceMotion) requestAnimationFrame(animateMenuBackdrop);
+      };
+      requestAnimationFrame(animateMenuBackdrop);
+
+      const gameFont = new Image();
+      const drawBitmapText = (canvas) => {
+        const text = canvas.dataset.text ?? '';
+        const variant = Number(canvas.dataset.variant ?? 0);
+        const cellSize = 8;
+        canvas.width = text.length * cellSize;
+        canvas.height = cellSize;
+
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (let index = 0; index < text.length; index += 1) {
+          const glyph = text.charCodeAt(index) - 32;
+          if (glyph < 0 || glyph >= 95) continue;
+          ctx.drawImage(
+            gameFont,
+            glyph * cellSize,
+            variant * cellSize,
+            cellSize,
+            cellSize,
+            index * cellSize,
+            0,
+            cellSize,
+            cellSize,
+          );
+        }
+      };
+      const setBitmapText = (canvas, text) => {
+        canvas.dataset.text = text;
+        if (gameFont.complete && gameFont.naturalWidth > 0)
+          drawBitmapText(canvas);
+      };
+      gameFont.addEventListener('load', () => {
+        document.querySelectorAll('.bitmap-text').forEach(drawBitmapText);
+      });
+      gameFont.src = '/assets/ui/game-font.png';
 
       const drawLevelPreview = (level) => {
         const ctx = levelCanvas.getContext('2d');
@@ -406,7 +555,8 @@
             drawLevelPreview(customLevel.level);
             levelPreview.hidden = false;
             launchScreen.classList.add('custom-level');
-            playButton.textContent = 'Play level';
+            setBitmapText(playButtonLabel, 'LAUNCH LEVEL');
+            playButton.setAttribute('aria-label', 'Launch level');
           }
         }
       } catch (error) {

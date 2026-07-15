@@ -1,6 +1,6 @@
 # Gradient Descent — Agent Handoff
 
-_Last updated: 2026-07-15 · Published version: **35** · Phaser project id: `RjzqGQux4x1`_
+_Last updated: 2026-07-15 · Published version: **37** · Phaser project id: `RjzqGQux4x1`_
 
 ## TL;DR — read this first
 
@@ -24,7 +24,7 @@ All tools are prefixed `mcp__phaser-game-agent__phaser_game_agent_*` (some are d
 7. **`finish`** — pauses the sandbox to stop billing (auto-resumes on next call). Call it when done each session.
 
 **Play URL:** https://phaser.io/agent/local/RjzqGQux4x1
-**Credits:** 504 remaining after the v35 session (`finish` has paused the workspace and stopped idle billing).
+**Credits:** 358 remaining after the v37 publish session (`finish` has paused the workspace and stopped idle billing).
 
 Engine docs live in the sandbox at `engine/raster/*.md` + `*.d.ts` — **reference only, never edit** `engine/`. Start with `engine/raster/index.md`, then per-topic docs (`input.md`, `particles.md`, etc.).
 
@@ -72,7 +72,7 @@ spec/
 
 ★ = added during the level-editor work described below.
 
-## What was built recently (versions 12–33)
+## What was built recently (versions 12–36)
 
 Earlier (v12): ported three feature commits from the local build into the TS source — a moving spaceship trace head, the 30-level campaign, and physical-keyboard input in Advanced mode.
 
@@ -148,6 +148,19 @@ Earlier (v12): ported three feature commits from the local build into the TS sou
 - A custom post consumes its automatic redirect only once per page load. The first Title setup still opens the authored course immediately.
 - The Play hamburger and the completion overlay's `TITLE` button now land on and remain at the title menu. `PLAY CUSTOM LEVEL` starts the authored course again on demand.
 - The verified v35 bundle is synced to `src/client/public/content.js`. Phaser verification passes 231 tests; the Devvit wrapper passes type-check, formatting, and production build.
+
+**Splash/menu visual parity and title reliability (v36)** — aligned the Devvit entry splash with the procedural title scene and repaired the missing in-game title.
+
+- The splash now renders the menu's deep-indigo gradient, three-layer starfield, two drifting nebula puffs, and small planet instead of its separate graph/trajectory background. It uses the exact in-game bitmap font and the logo has no splash-only glow.
+- The title scene initializes its logo texture before the custom-post auto-redirect, so returning to `TITLE` cannot encounter an uninitialized title texture. The exact logo was re-uploaded as a fresh Phaser-library asset to avoid a stale runtime object.
+- The verified v36 bundle is synced to `src/client/public/content.js`. Phaser verification passes 231 tests; the Devvit wrapper passes type-check, formatting, and production build.
+
+**Authenticated daily-play streaks (v37)** — added a Redis-backed consecutive-day counter that advances only when a signed-in Reddit user enters the Daily Challenge.
+
+- Each user gets an idempotent Redis sorted-set history keyed by local `YYYY-MM-DD`, so retries and repeat taps cannot increment the same day twice. The active streak is the consecutive run ending today or yesterday; missing a full local day resets the displayed count.
+- The server accepts only valid local dates within one day of UTC, resolving identity exclusively from authenticated Devvit context. Campaign, custom, editor, and ordinary title visits never write streak data.
+- The highlighted Daily title button is widened to contain a multi-tone, integer-aligned pixel flame to the right of the date. The canonical count is rendered inside it with the same bitmap font as the rest of the UI.
+- The verified v37 bundle is synced to `src/client/public/content.js`. Phaser verification passes 233 tests; the Devvit wrapper passes type-check, formatting, and production build.
 
 ## Key constants (`src/config.ts`)
 

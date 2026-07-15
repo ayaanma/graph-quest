@@ -28,6 +28,7 @@
         const customLevels = await import("./custom-levels.ts");
         await Promise.all([
             import("./leaderboard.ts"),
+            import("./daily-streak.ts"),
             customLevels.initializeCustomLevels(),
         ]);
         await import(/* @vite-ignore */ "/content.js");
