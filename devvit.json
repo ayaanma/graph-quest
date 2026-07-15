@@ -5,8 +5,9 @@
     "reddit": {
       "enable": true,
       "scope": "user",
-      "asUser": ["SUBMIT_POST"]
-    }
+      "asUser": ["SUBMIT_POST", "SUBMIT_COMMENT"]
+    },
+    "media": true
   },
   "post": {
     "dir": "dist/client",

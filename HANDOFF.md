@@ -1,6 +1,6 @@
 # Gradient Descent — Agent Handoff
 
-_Last updated: 2026-07-15 · Published version: **37** · Phaser project id: `RjzqGQux4x1`_
+_Last updated: 2026-07-15 · Published version: **38** · Phaser project id: `RjzqGQux4x1`_
 
 ## TL;DR — read this first
 
@@ -19,12 +19,12 @@ All tools are prefixed `mcp__phaser-game-agent__phaser_game_agent_*` (some are d
 2. **`snapshot`** with a label before any big/risky change (keeps newest 5; restore with `restore`).
 3. **`read_files`** / **`grep`** / **`ls`** to explore. ⚠️ `read_files` fails if the batch is too large — read big files (e.g. `play.ts` ~34KB) one at a time.
 4. **`write_files`** to author. ⚠️ **This overwrites the ENTIRE file** — there is no partial-edit tool for the sandbox. You must supply full file contents. Read the file first, modify, write it whole.
-5. **`verify`** — runs `tsc` (type-check) + `src/verify.ts` acceptance tests. Must be `ok: true` before publishing. Currently **231 tests pass, 0 fail**.
+5. **`verify`** — runs `tsc` (type-check) + `src/verify.ts` acceptance tests. Must be `ok: true` before publishing. Currently **236 tests pass, 0 fail**.
 6. **`preview`** with a `changes:` note — builds + publishes a new version to the user's Phaser account, returns the play URL.
 7. **`finish`** — pauses the sandbox to stop billing (auto-resumes on next call). Call it when done each session.
 
 **Play URL:** https://phaser.io/agent/local/RjzqGQux4x1
-**Credits:** 358 remaining after the v37 publish session (`finish` has paused the workspace and stopped idle billing).
+**Credits:** 308 remaining after the v38 publish session (`finish` has paused the workspace and stopped idle billing).
 
 Engine docs live in the sandbox at `engine/raster/*.md` + `*.d.ts` — **reference only, never edit** `engine/`. Start with `engine/raster/index.md`, then per-topic docs (`input.md`, `particles.md`, etc.).
 
@@ -33,6 +33,7 @@ Engine docs live in the sandbox at `engine/raster/*.md` + `*.d.ts` — **referen
 - `src/client/index.html` + `src/client/public/content.js` are the deployed browser game. The bundle lives under `public/` so Vite copies the generated file without rewriting it.
 - `src/client/public/assets/` and `src/client/public/levels.js` are copied unchanged into the client build.
 - `src/server/index.ts` hosts Devvit API and moderator post-creation endpoints.
+- `src/client/share-run.ts` requests run-as-user comment consent from the trusted completion-button tap; `src/server/share-run.ts` validates the generated GIF, uploads it to Reddit media, and submits the rich-text run comment beneath a single stickied share anchor.
 - `devvit.json` defines the custom-post entrypoint and moderator menu action.
 - `npm run check` type-checks, formats-checks, and builds; `npm run dev` starts a Reddit playtest; `npm run deploy` uploads a private build; `npm run launch` submits it for review.
 - Before first-time registration, `devvit.json` intentionally uses the official `<% name %>` placeholder. Run `npx devvit init` without `--force`, request `gradient-descent` if available, and let the CLI synchronize the registered slug into `devvit.json` and `package.json`.
@@ -72,7 +73,7 @@ spec/
 
 ★ = added during the level-editor work described below.
 
-## What was built recently (versions 12–36)
+## What was built recently (versions 12–38)
 
 Earlier (v12): ported three feature commits from the local build into the TS source — a moving spaceship trace head, the 30-level campaign, and physical-keyboard input in Advanced mode.
 
@@ -162,6 +163,13 @@ Earlier (v12): ported three feature commits from the local build into the TS sou
 - The highlighted Daily title button is widened to contain a multi-tone, integer-aligned pixel flame to the right of the date. The canonical count is rendered inside it with the same bitmap font as the rest of the UI.
 - The verified v37 bundle is synced to `src/client/public/content.js`. Phaser verification passes 233 tests; the Devvit wrapper passes type-check, formatting, and production build.
 
+**Generated-GIF Reddit comments (v38)** — replaced the separate `SHARE FUNCTION` clipboard action and `EXPORT AS GIF` download with one explicit `COMMENT GIF` action.
+
+- The trusted button tap requests Reddit's run-as-user consent before replay/encoding begins. `devvit.json` now declares `SUBMIT_COMMENT` and media-upload permissions alongside the existing custom-post permission.
+- The completed function is replayed at 10 fps and encoded in-browser, but the capture is now exactly 384×204: the top bar and full graph ending immediately above the in-game function panel. The recorded final time stays fixed at the top-right for every frame; the hamburger, hint, CRT `#`, mute, best-time, and star HUD are all omitted.
+- The Devvit server validates the GIF89a data URL and run metadata, uploads the animation to Reddit media, and submits a rich-text comment as the player containing the level and `f(x)` used. Generic run shares are replies beneath one app-created stickied anchor per post, following Reddit's score-sharing pattern.
+- The v38 Phaser bundle is synced to `src/client/public/content.js`. Phaser verification passes 236 tests; the Devvit wrapper passes type-check, formatting, and production build.
+
 ## Key constants (`src/config.ts`)
 
 - Canvas `W=384 H=288` (4:3). World `x∈[-10,10] y∈[-8,8]`.
@@ -184,8 +192,8 @@ Earlier (v12): ported three feature commits from the local build into the TS sou
 ## Open items / suggested next steps
 
 1. **FUNCTION-tab LAUNCH position** was placed on the right (matching Play's LAUNCH). If the intent was the exact bottom-left spot of the TOOLS-tab LAUNCH, the keypad needs reflowing to make room.
-2. **Authenticated Reddit playtest:** create, solve, and upload a level in the configured playtest subreddit to confirm the consent dialog and final user-owned post on a real account.
+2. **Authenticated Reddit playtest:** create, solve, and upload a level, then clear any level and use `COMMENT GIF` in the configured playtest subreddit. Confirm both run-as-user consent flows, the user-owned custom post, the stickied run-share anchor, and the rendered animated reply on a real account.
 
 ## Verifying you're set up
 
-`open_project` → `read_files ["engine/raster/index.md"]` → `read_files ["src/scenes/editor.ts"]` → make changes with `write_files` → `verify` (expect `231 passed, 0 failed`) → `preview` → `finish`.
+`open_project` → `read_files ["engine/raster/index.md"]` → `read_files ["src/scenes/editor.ts"]` → make changes with `write_files` → `verify` (expect `236 passed, 0 failed`) → `preview` → `finish`.

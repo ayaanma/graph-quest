@@ -35,10 +35,12 @@ npm run dev
 
 ```text
 src/client/index.html                 HTML entrypoint processed by Vite
+src/client/share-run.ts               run-as-user consent + GIF comment bridge
 src/client/public/content.js          generated game bundle copied unchanged
 src/client/public/levels.js           preserved generated level export
 src/client/public/assets/             images and music copied unchanged
 src/server/index.ts                   Devvit server and post-creation action
+src/server/share-run.ts               Reddit media upload + rich-text run comment
 ```
 
 When replacing the generated game export:

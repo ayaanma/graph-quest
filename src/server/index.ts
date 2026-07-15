@@ -24,6 +24,7 @@ import {
   isCurrentLocalDay,
   recordDailyPlay,
 } from './daily-streak.js';
+import { commentSharedRun, normalizeShareRun } from './share-run.js';
 
 const app = new Hono();
 
@@ -201,6 +202,40 @@ app.post('/api/leaderboard', async (c) => {
       isPlayer: true,
     },
   });
+});
+
+app.post('/api/share-run', async (c) => {
+  if (!context.userId) {
+    return c.json(
+      { error: 'Sign in to Reddit to comment a completed path' },
+      401,
+    );
+  }
+  if (!context.postId) {
+    return c.json({ error: 'This game post is unavailable' }, 400);
+  }
+
+  let body: unknown;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Request body must be valid JSON' }, 400);
+  }
+
+  const run = normalizeShareRun(body);
+  if (!run) {
+    return c.json({ error: 'Completed run data is invalid' }, 400);
+  }
+
+  try {
+    return c.json(await commentSharedRun(context.postId, run));
+  } catch (error) {
+    console.error('Failed to comment Gradient Descent run', error);
+    return c.json(
+      { error: 'Reddit could not comment this completed path' },
+      400,
+    );
+  }
 });
 
 app.post('/internal/menu/post-create', async (c) => {
