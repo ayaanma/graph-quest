@@ -1,10 +1,10 @@
 # GraphQuest — Agent Handoff
 
-_Last updated: 2026-07-14 · Published version: **15** · Phaser project id: `RjzqGQux4x1`_
+_Last updated: 2026-07-14 · Published version: **21** · Phaser project id: `RjzqGQux4x1`_
 
 ## TL;DR — read this first
 
-**This local folder (`/Users/mattma/Projects/graph-quest`) is a BUILT EXPORT, not the source of truth.**
+**This local folder is a BUILT EXPORT, not the source of truth.**
 `content.js` is a minified esbuild bundle and `levels.js` is generated data. **Do not edit them** — changes here do nothing to the real game.
 
 The **real, editable TypeScript source lives in the Phaser Game Agent cloud sandbox**, project `RjzqGQux4x1`, owned by the user's Phaser account (user `maatm`). You reach it through the **`phaser-game-agent` MCP tools**, never through the local filesystem.
@@ -19,12 +19,12 @@ All tools are prefixed `mcp__phaser-game-agent__phaser_game_agent_*` (some are d
 2. **`snapshot`** with a label before any big/risky change (keeps newest 5; restore with `restore`).
 3. **`read_files`** / **`grep`** / **`ls`** to explore. ⚠️ `read_files` fails if the batch is too large — read big files (e.g. `play.ts` ~34KB) one at a time.
 4. **`write_files`** to author. ⚠️ **This overwrites the ENTIRE file** — there is no partial-edit tool for the sandbox. You must supply full file contents. Read the file first, modify, write it whole.
-5. **`verify`** — runs `tsc` (type-check) + `src/verify.ts` acceptance tests. Must be `ok: true` before publishing. Currently **194 tests pass, 0 fail**.
+5. **`verify`** — runs `tsc` (type-check) + `src/verify.ts` acceptance tests. Must be `ok: true` before publishing. Currently **218 tests pass, 0 fail**.
 6. **`preview`** with a `changes:` note — builds + publishes a new version to the user's Phaser account, returns the play URL.
 7. **`finish`** — pauses the sandbox to stop billing (auto-resumes on next call). Call it when done each session.
 
 **Play URL:** https://phaser.io/agent/local/RjzqGQux4x1
-**Credits:** ~1363 remaining (each session bills a little; `finish` stops idle billing).
+**Credits:** ~1152 remaining (each session bills a little; `finish` stops idle billing).
 
 Engine docs live in the sandbox at `engine/raster/*.md` + `*.d.ts` — **reference only, never edit** `engine/`. Start with `engine/raster/index.md`, then per-topic docs (`input.md`, `particles.md`, etc.).
 
@@ -40,6 +40,10 @@ logic/
   trace.ts         computeTrace(fn, level): offset curve walk + sample/segment collision
   projection.ts    worldToScreen(x,y)  AND  screenToWorld(sx,sy) (exact inverse, added for editor)
   levels.ts        Level interface + 30-level campaign (3 crafted l1-l3 + 27 authored l4-l30)
+  daily.ts         local calendar day key + seeded solution-first daily generator + run selector
+  gif.ts           dependency-free GIF89a encoder + 3-3-2 color quantizer for solved-run exports
+  textbox.ts       fixed-font text measurement + safe dynamic transient-message boxes
+  leaderboard.ts   deterministic per-level fake Reddit boards + stars-first/time-second ranking
   blocks.ts        block-mode term catalogue -> expression
   scoring.ts       formatTime + score formula
   store.ts         persistence abstraction (mute, progress, best times/stars)
@@ -59,7 +63,7 @@ spec/
 
 ★ = added during the level-editor work described below.
 
-## What was built recently (versions 12–15)
+## What was built recently (versions 12–21)
 
 Earlier (v12): ported three feature commits from the local build into the TS source — a moving spaceship trace head, the 30-level campaign, and physical-keyboard input in Advanced mode.
 
@@ -74,11 +78,37 @@ Earlier (v12): ported three feature commits from the local build into the TS sou
 - **UPLOAD (placeholder, no backend):** stays dim/locked until a LAUNCH fly reaches the goal collecting **all** stars (`completed` flag). On a full-star clear it lights up (cyan glow + pulse). **Any edit re-locks it** (`completed = false` on every mutation). Tapping while locked prompts the requirement. There is intentionally **no upload backend yet**.
 - **Cursor coordinate readout** centered at the top of the screen while hovering the grid.
 
+**Per-level leaderboards (v16)** — the Level-Clear overlay was reflowed upward to make room for a synthwave-styled, clipped leaderboard below the clear stats.
+
+- `src/logic/leaderboard.ts` deterministically generates 20 fictional `u/...` Reddit-style users per level and inserts the current run as highlighted `u/you`.
+- Ranking is stars descending, then time ascending. Stars are deliberately the primary key, so one extra star outweighs any time advantage.
+- The list supports touch/mouse drag, mouse wheel, and compact up/down controls. RETRY / NEXT / SHARE remain fixed below it.
+- This is prototype data only; a real Devvit leaderboard should preserve the module boundary and replace generation with Redis-backed per-user/per-level records.
+
+**Local-time Daily Challenge (v17, corrected in v18)** — a highlighted `DAILY · MM-DD` entry on the title screen launches a deterministic, solution-first daily course through the normal Play scene.
+
+- `src/logic/daily.ts` hashes `YYYY-MM-DD` with FNV-1a, feeds a deterministic PRNG, authors a valid expression/path first, samples three stars on that path, and places seeded hazards outside a collision-safe corridor.
+- The date key uses the player's browser-local `getFullYear()` / `getMonth()` / `getDate()` values and rolls at local midnight. It is frozen when the run starts, so crossing midnight cannot change a level mid-attempt. Daily play does not overwrite campaign progress.
+- Daily runs reuse the complete Blocks/Type editor, trace animation, scoring, retry, hint, share, best-time persistence, and leaderboard overlay. Daily ids/boards are namespaced as `daily:YYYY-MM-DD`; share text includes the local calendar date.
+- The daily clear overlay says `DAILY CLEAR`; RETRY keeps the frozen seed and the primary exit returns to TITLE.
+- Verification covers the exact 00:00Z rollover, deterministic same-day output, adjacent-day variation, leaderboard time bounds, and an entire leap-year corpus (366 generated levels must compile, reach the goal, collect every star, and produce >350 distinct layouts).
+- The board still uses deterministic prototype Reddit handles. In a production Devvit Web host, keep the client's local date key, resolve the username server-side, and replace the leaderboard adapter with Redis sorted sets keyed by the same daily id.
+
+**Solved-run GIF export (v19, cleaned up in v20–v21)** — the Level-Clear overlay now has an `EXPORT AS GIF` button beside `SHARE FUNCTION`.
+
+- Export recompiles the stored winning equation and visibly replays the already-validated path; it does not create a new attempt, rewrite progress, or post another leaderboard result.
+- The downloadable looping GIF is 384×218 at 10 fps with a 0.8-second final hold. It captures a simplified level/final-time header, graph, obstacles, stars, target, moving ship/trace, and a dedicated `f(x)` strip while excluding the input controls and all interactive HUD icons.
+- `src/logic/gif.ts` contains a dependency-free GIF89a/LZW encoder with fixed 3-3-2 color quantization. Verification asserts its header/dimensions/trailer; an ImageMagick decode also validated a representative 24-frame output.
+- The exported header displays the recorded final time for the entire replay at the true top-right edge; it does not count upward. Campaign and Daily runs use the same exporter and produce sanitized filenames from the level id.
+- In v21 the complete overlay (title, time/stars/best, leaderboard, scroll controls, action buttons, hit targets, and feedback banner) moved down 12px as a unit, retaining all prior spacing.
+- Transient message boxes in Play, Editor, and Level Select now measure the actual 8×8 bitmap-font width, add 8px horizontal padding, expand up to the 376px safe width, and truncate only at that hard limit. The editor's `Can't cover start, goal, or a star` warning now gets a 288px box instead of overflowing a fixed banner.
+
 ## Key constants (`src/config.ts`)
 
 - Canvas `W=384 H=288` (4:3). World `x∈[-10,10] y∈[-8,8]`.
 - `GOAL_TOL=0.4`, `STAR_TOL=0.3`, `SAMPLE_DX=0.02` (collision), `DRAW_DX=0.05` (draw), `UNSTABLE_Y=12` (|y|>12 ⇒ "unstable").
 - `TRACE_SPEED=8`, `TRACE_RAMP=0.45`, `COEF_STEP=0.1`, `PERSP_FAR=0.35` (grid tilt).
+- `LEADERBOARD_FAKE_COUNT=20`, `LEADERBOARD_ROW_H=11` (prototype board density).
 - Layout rects: `GRAPH={x:12,y:26,w:360,h:176}`, `PANEL={x:0,y:204,w:384,h:84}`, `TOPBAR_H=22`.
 - `COL` palette: `accent` `#5cd6ff` (cyan), `accent2` `#a78bff` (violet), `goal` `#6cffb0` (mint), `star` `#ffd86b`, `bad` `#ff6b7a`.
 
@@ -94,12 +124,12 @@ Earlier (v12): ported three feature commits from the local build into the TS sou
 
 ## Open items / suggested next steps
 
-1. **UPLOAD has no backend.** Wire it to actually persist/publish a custom level (define a serialization format for `{start, goal, obstacles, stars, adv}`; the editor already snaps everything to 3dp). Consider where custom levels get stored and how they're played.
-2. **Starless-level edge case:** a level with **zero stars** currently counts as "all stars collected" the instant the ship reaches the goal, so UPLOAD unlocks on goal alone. Decide whether to require ≥1 star.
-3. **FUNCTION-tab LAUNCH position** was placed on the right (matching Play's LAUNCH). If the intent was the exact bottom-left spot of the TOOLS-tab LAUNCH, the keypad needs reflowing to make room.
-4. **Playtest the editor visually** — the sandbox can screenshot; verify covers logic/type-safety but not layout. Watch panel text overflow at 384px width.
-5. **Older divergence not ported:** the local build carries an older `v4` GIF-export / reworked complete-screen feature that was intentionally NOT ported (it wasn't part of the requested work). Port only if asked.
+1. **Leaderboard backend:** v18 uses stable fake users by design. For production Devvit Web, back `logic/leaderboard` with Redis keyed by `levelId + userId` (daily ids already include the player's local calendar date), resolve Reddit display names server-side, and keep the existing stars-first/time-second comparator.
+2. **UPLOAD has no backend.** Wire it to actually persist/publish a custom level (define a serialization format for `{start, goal, obstacles, stars, adv}`; the editor already snaps everything to 3dp). Consider where custom levels get stored and how they're played.
+3. **Starless-level edge case:** a level with **zero stars** currently counts as "all stars collected" the instant the ship reaches the goal, so UPLOAD unlocks on goal alone. Decide whether to require ≥1 star.
+4. **FUNCTION-tab LAUNCH position** was placed on the right (matching Play's LAUNCH). If the intent was the exact bottom-left spot of the TOOLS-tab LAUNCH, the keypad needs reflowing to make room.
+5. **Playtest the editor visually** — the sandbox can screenshot; verify covers logic/type-safety but not layout. Watch panel text overflow at 384px width.
 
 ## Verifying you're set up
 
-`open_project` → `read_files ["engine/raster/index.md"]` → `read_files ["src/scenes/editor.ts"]` → make changes with `write_files` → `verify` (expect `194 passed, 0 failed`) → `preview` → `finish`.
+`open_project` → `read_files ["engine/raster/index.md"]` → `read_files ["src/scenes/editor.ts"]` → make changes with `write_files` → `verify` (expect `218 passed, 0 failed`) → `preview` → `finish`.
