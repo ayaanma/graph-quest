@@ -1,6 +1,6 @@
 # Gradient Descent — Agent Handoff
 
-_Last updated: 2026-07-15 · Published version: **40** · Phaser project id: `RjzqGQux4x1`_
+_Last updated: 2026-07-15 · Published version: **42** · Phaser project id: `RjzqGQux4x1`_
 
 ## TL;DR — read this first
 
@@ -190,6 +190,12 @@ Earlier (v12): ported three feature commits from the local build into the TS sou
 - Title now arms the soundtrack during setup and starts it synchronously on the first pointer/key gesture (the `PRESS TO START` interaction), satisfying browser autoplay policy.
 - A game-lifetime guard ensures `sound.music(...)` is called only once. The game-owned looping audio element therefore continues through campaign, Daily, custom, level-select, editor, game-over, and every return to Title without resetting its playback position.
 - Phaser verification passes 236 tests and v40 is published. The local generated `src/client/public/content.js` remains at v39 and must be refreshed through the normal generated-bundle sync before the next Devvit deployment; do not hand-edit it.
+
+**Title logo + soundtrack fixes (v42)** — corrected the clipped title logo and made the music actually start and persist on Reddit.
+
+- **Logo:** `title.ts` was cropping a stale `704x159` source region, but the v36 logo asset is `866x288`, so it clipped the right (~"nt") and bottom of the lettering. Now draws the full source centred: `r.drawImage(ctx, this.logo, 70.76, 32 + bob, 0, 0, 866, 288, 0.28)`.
+- **Music:** the v40 approach armed `window` `pointerdown`/`keydown` listeners in `setup()`, but on Reddit those didn't reliably fire from canvas taps and the AudioContext was often still autoplay-suspended when `music()` ran — so the track only became audible after a level round-trip, and felt like it restarted. Replaced `armPersistentMusic` with `startMusicOnce(sound, url)` called from the title's **engine `onTap`** (a gesture the engine itself processes), which calls `sound.resume()` then `sound.music(...)`. A module singleton still guarantees exactly one `music()` call per session, so returning to the menu never restarts it. Confirmed in the published bundle: `.music(` appears once, minified as `resume(),music(url,{loop,volume,fadeIn})`.
+- Phaser verification passes 236 tests; **v42 published**. `src/client/public/content.js` is now **synced to v42** (superseding the v39 note above). The Devvit build's `localize-game-assets` plugin rewrites its external asset URLs to `/assets/`. Logo verified by booting the built bundle locally; **music still needs a real Reddit playtest** to confirm audio on-device.
 
 ## Devvit wrapper edits (local — not yet deployed)
 

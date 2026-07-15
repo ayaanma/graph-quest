@@ -5,8 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gradient Descent</title>
 <style>
-    html, body { width: 100%; height: 100%; margin: 0; padding: 0; background: #000; overflow: hidden; }
-    #stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+    html, body { width: 100%; height: 100%; margin: 0; padding: 0; background: #04050d; overflow: hidden; }
+    /* The canvas is letterboxed (object-fit: contain) to keep its aspect ratio inside
+       the Reddit webview, whose shape varies by device. Paint the leftover area with the
+       game's own sky gradient so the bars blend into the space backdrop instead of
+       reading as black borders. */
+    #stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+             background: linear-gradient(180deg, #0a0f24 0%, #070a18 55%, #04050d 100%); }
     #game { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
     #boot { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; color: #8993b3; font: 13px ui-sans-serif, system-ui, sans-serif; pointer-events: none; }
     body.booted #boot { display: none; }
