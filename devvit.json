@@ -1,6 +1,13 @@
 {
   "$schema": "https://developers.reddit.com/schema/config-file.v1.json",
   "name": "gradient-desc",
+  "permissions": {
+    "reddit": {
+      "enable": true,
+      "scope": "user",
+      "asUser": ["SUBMIT_POST"]
+    }
+  },
   "post": {
     "dir": "dist/client",
     "entrypoints": {

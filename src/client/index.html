@@ -24,7 +24,15 @@
 <div id="stage"><canvas id="game"></canvas></div>
 <div id="boot">loading…</div>
 <script type="module">
-    try { await import(/* @vite-ignore */ "/content.js"); requestAnimationFrame(() => document.body.classList.add("booted")); }
+    try {
+        const customLevels = await import("./custom-levels.ts");
+        await Promise.all([
+            import("./leaderboard.ts"),
+            customLevels.initializeCustomLevels(),
+        ]);
+        await import(/* @vite-ignore */ "/content.js");
+        requestAnimationFrame(() => document.body.classList.add("booted"));
+    }
     catch (e) { document.getElementById("boot").textContent = "failed to load: " + (e && e.message || e); }
 </script>
 </body>

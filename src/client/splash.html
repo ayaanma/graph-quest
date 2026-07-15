@@ -93,6 +93,73 @@
         text-transform: uppercase;
       }
 
+      .level-preview {
+        width: min(82vw, 440px);
+        margin: 8px 0 13px;
+      }
+
+      .level-preview[hidden] {
+        display: none;
+      }
+
+      .level-name {
+        margin: 0 0 5px;
+        color: #ffffff;
+        font-size: clamp(12px, 2.7vw, 16px);
+        letter-spacing: 0.08em;
+        line-height: 1.1;
+        text-shadow: 0 0 8px rgb(92 214 255 / 90%);
+      }
+
+      .level-canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        border: 1px solid #a78bff;
+        border-radius: 3px;
+        background: rgb(7 9 20 / 88%);
+        box-shadow:
+          0 0 0 2px rgb(7 9 20 / 80%),
+          0 0 14px rgb(92 214 255 / 38%),
+          inset 0 0 18px rgb(167 139 255 / 12%);
+        image-rendering: pixelated;
+      }
+
+      .launch-screen.custom-level {
+        padding-block: 10px;
+      }
+
+      .custom-level .launch-card {
+        transform: none;
+      }
+
+      .custom-level .title-logo {
+        width: min(66vw, 380px);
+      }
+
+      .custom-level .tagline {
+        display: none;
+      }
+
+      .custom-level .level-preview {
+        width: min(74vw, 360px);
+        margin: 4px 0 10px;
+      }
+
+      .custom-level .level-name {
+        margin-bottom: 3px;
+        font-size: clamp(12px, 2.4vw, 14px);
+      }
+
+      .custom-level .play-button {
+        min-height: 44px;
+        padding-block: 9px;
+      }
+
+      .custom-level .status {
+        margin-top: 8px;
+      }
+
       .play-button {
         position: relative;
         min-width: min(78vw, 280px);
@@ -196,6 +263,16 @@
           width="704"
           height="159"
         />
+        <section class="level-preview" id="level-preview" hidden>
+          <h2 class="level-name" id="level-name"></h2>
+          <canvas
+            class="level-canvas"
+            id="level-canvas"
+            width="720"
+            height="220"
+            aria-label="Custom level preview"
+          ></canvas>
+        </section>
         <p class="tagline">Trace the function. Dodge the obstacles.</p>
         <button class="play-button" id="play" type="button">
           Play to start
@@ -209,6 +286,132 @@
 
       const playButton = document.querySelector('#play');
       const status = document.querySelector('#status');
+      const launchScreen = document.querySelector('.launch-screen');
+      const levelPreview = document.querySelector('#level-preview');
+      const levelName = document.querySelector('#level-name');
+      const levelCanvas = document.querySelector('#level-canvas');
+
+      const drawLevelPreview = (level) => {
+        const ctx = levelCanvas.getContext('2d');
+        const width = levelCanvas.width;
+        const height = levelCanvas.height;
+        const pad = 18;
+        const sx = (x) => pad + ((x + 10) / 20) * (width - pad * 2);
+        const sy = (y) => pad + ((8 - y) / 16) * (height - pad * 2);
+
+        ctx.clearRect(0, 0, width, height);
+        ctx.fillStyle = '#070914';
+        ctx.fillRect(0, 0, width, height);
+
+        ctx.lineWidth = 1;
+        for (let x = -10; x <= 10; x += 2) {
+          ctx.strokeStyle = x === 0 ? '#4c5880' : '#242a4a';
+          ctx.beginPath();
+          ctx.moveTo(sx(x), sy(-8));
+          ctx.lineTo(sx(x), sy(8));
+          ctx.stroke();
+        }
+        for (let y = -8; y <= 8; y += 2) {
+          ctx.strokeStyle = y === 0 ? '#4c5880' : '#242a4a';
+          ctx.beginPath();
+          ctx.moveTo(sx(-10), sy(y));
+          ctx.lineTo(sx(10), sy(y));
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = 'rgb(255 107 122 / 30%)';
+        ctx.strokeStyle = '#ff6b7a';
+        ctx.lineWidth = 2;
+        for (const obstacle of level.obstacles) {
+          ctx.beginPath();
+          if (obstacle.kind === 'circle') {
+            ctx.ellipse(
+              sx(obstacle.center.x),
+              sy(obstacle.center.y),
+              (obstacle.radius / 20) * (width - pad * 2),
+              (obstacle.radius / 16) * (height - pad * 2),
+              0,
+              0,
+              Math.PI * 2,
+            );
+          } else if (obstacle.kind === 'triangle') {
+            obstacle.vertices.forEach((point, index) => {
+              if (index === 0) ctx.moveTo(sx(point.x), sy(point.y));
+              else ctx.lineTo(sx(point.x), sy(point.y));
+            });
+            ctx.closePath();
+          } else {
+            ctx.rect(
+              sx(obstacle.x0),
+              sy(obstacle.y1),
+              sx(obstacle.x1) - sx(obstacle.x0),
+              sy(obstacle.y0) - sy(obstacle.y1),
+            );
+          }
+          ctx.fill();
+          ctx.stroke();
+        }
+
+        for (const star of level.stars) {
+          const x = sx(star.x);
+          const y = sy(star.y);
+          ctx.fillStyle = '#ffd86b';
+          ctx.beginPath();
+          ctx.moveTo(x, y - 6);
+          ctx.lineTo(x + 6, y);
+          ctx.lineTo(x, y + 6);
+          ctx.lineTo(x - 6, y);
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        const startX = sx(level.start.x);
+        const startY = sy(level.start.y);
+        ctx.fillStyle = '#5cd6ff';
+        ctx.strokeStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.moveTo(startX + 8, startY);
+        ctx.lineTo(startX - 6, startY - 6);
+        ctx.lineTo(startX - 3, startY);
+        ctx.lineTo(startX - 6, startY + 6);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        const goalX = sx(level.goal.x);
+        const goalY = sy(level.goal.y);
+        ctx.fillStyle = 'rgb(108 255 176 / 22%)';
+        ctx.strokeStyle = '#6cffb0';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(goalX, goalY, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#6cffb0';
+        ctx.beginPath();
+        ctx.arc(goalX, goalY, 4, 0, Math.PI * 2);
+        ctx.fill();
+      };
+
+      try {
+        const response = await fetch('/api/init');
+        if (response.ok) {
+          const { customLevel } = await response.json();
+          if (customLevel?.level && customLevel.author) {
+            levelName.textContent = `${customLevel.author}'s Level`;
+            levelCanvas.setAttribute(
+              'aria-label',
+              `${customLevel.author}'s custom level preview`,
+            );
+            drawLevelPreview(customLevel.level);
+            levelPreview.hidden = false;
+            launchScreen.classList.add('custom-level');
+            playButton.textContent = 'Play level';
+          }
+        }
+      } catch (error) {
+        console.warn('Could not load custom level preview', error);
+      }
 
       playButton.addEventListener('click', (event) => {
         playButton.disabled = true;

@@ -1,6 +1,6 @@
 # Gradient Descent — Agent Handoff
 
-_Last updated: 2026-07-14 · Published version: **31** · Phaser project id: `RjzqGQux4x1`_
+_Last updated: 2026-07-15 · Published version: **35** · Phaser project id: `RjzqGQux4x1`_
 
 ## TL;DR — read this first
 
@@ -19,12 +19,12 @@ All tools are prefixed `mcp__phaser-game-agent__phaser_game_agent_*` (some are d
 2. **`snapshot`** with a label before any big/risky change (keeps newest 5; restore with `restore`).
 3. **`read_files`** / **`grep`** / **`ls`** to explore. ⚠️ `read_files` fails if the batch is too large — read big files (e.g. `play.ts` ~34KB) one at a time.
 4. **`write_files`** to author. ⚠️ **This overwrites the ENTIRE file** — there is no partial-edit tool for the sandbox. You must supply full file contents. Read the file first, modify, write it whole.
-5. **`verify`** — runs `tsc` (type-check) + `src/verify.ts` acceptance tests. Must be `ok: true` before publishing. Currently **228 tests pass, 0 fail**.
+5. **`verify`** — runs `tsc` (type-check) + `src/verify.ts` acceptance tests. Must be `ok: true` before publishing. Currently **231 tests pass, 0 fail**.
 6. **`preview`** with a `changes:` note — builds + publishes a new version to the user's Phaser account, returns the play URL.
 7. **`finish`** — pauses the sandbox to stop billing (auto-resumes on next call). Call it when done each session.
 
 **Play URL:** https://phaser.io/agent/local/RjzqGQux4x1
-**Credits:** ~878 remaining (each session bills a little; `finish` stops idle billing).
+**Credits:** 504 remaining after the v35 session (`finish` has paused the workspace and stopped idle billing).
 
 Engine docs live in the sandbox at `engine/raster/*.md` + `*.d.ts` — **reference only, never edit** `engine/`. Start with `engine/raster/index.md`, then per-topic docs (`input.md`, `particles.md`, etc.).
 
@@ -52,7 +52,7 @@ logic/
   daily.ts         local calendar day key + seeded solution-first daily generator + run selector
   gif.ts           dependency-free GIF89a encoder + 3-3-2 color quantizer for solved-run exports
   textbox.ts       fixed-font text measurement + safe dynamic transient-message boxes
-  leaderboard.ts   deterministic per-level fake Reddit boards + stars-first/time-second ranking
+  leaderboard.ts   Devvit host adapter + standalone fallback + stars-first/time-second ranking
   blocks.ts        block-mode term catalogue -> expression
   scoring.ts       formatTime + score formula
   store.ts         persistence abstraction (mute, progress, best times/stars)
@@ -72,7 +72,7 @@ spec/
 
 ★ = added during the level-editor work described below.
 
-## What was built recently (versions 12–31)
+## What was built recently (versions 12–33)
 
 Earlier (v12): ported three feature commits from the local build into the TS source — a moving spaceship trace head, the 30-level campaign, and physical-keyboard input in Advanced mode.
 
@@ -84,7 +84,7 @@ Earlier (v12): ported three feature commits from the local build into the TS sou
 - **Coordinate mapping:** taps → world via `screenToWorld` (exact inverse of `worldToScreen`; round-trip asserted in `verify.ts`). **Every placed coordinate snaps to 3 decimals** (`Number(v.toFixed(3))`), matching the campaign data format.
 - **Wall guard:** a wall may not cover the start pad, goal, or any star (checked against each anchor's tolerance radius — `GOAL_TOL` 0.4 / `STAR_TOL` 0.3). Blocked drops turn the preview red and are refused with an error buzz.
 - **LAUNCH (test-fly):** builds a transient `Level` from the current placement and runs the real `computeTrace`, animating the shared ship, popping stars, reporting goal/fail via a toast. Present in **both** tabs — small button bottom-left in TOOLS, tall button on the right in FUNCTION (matching Play's LAUNCH position).
-- **UPLOAD (placeholder, no backend):** stays dim/locked until a LAUNCH fly reaches the goal collecting **all** stars (`completed` flag). On a full-star clear it lights up (cyan glow + pulse). **Any edit re-locks it** (`completed = false` on every mutation). Tapping while locked prompts the requirement. There is intentionally **no upload backend yet**.
+- **UPLOAD:** stays dim/locked until a LAUNCH fly reaches the goal collecting **all** stars (`completed` flag), with at least one star required. On a full-star clear it lights up (cyan glow + pulse). **Any edit re-locks it** (`completed = false` on every mutation). In Reddit, tapping it requests run-as-user consent and publishes the snapped course as a custom post owned by that user.
 - **Cursor coordinate readout** centered at the top of the screen while hovering the grid.
 
 **Per-level leaderboards (v16)** — the Level-Clear overlay was reflowed upward to make room for a synthwave-styled, clipped leaderboard below the clear stats.
@@ -120,12 +120,41 @@ Earlier (v12): ported three feature commits from the local build into the TS sou
 
 **10% wider title (v31)** — widened the v30 title exactly 10% to a 704×159 asset and recentered its unchanged 0.34-scale draw at x=72.32. The logo height, subtitle clearance, and menu controls remain unchanged.
 
+**Real Reddit leaderboards (v32)** — replaced the fictional board generator with a Devvit Web host bridge backed by Redis.
+
+- The server resolves identity from the authenticated Reddit context; clients never submit a username or user id.
+- Each campaign or daily board stores exactly one immutable first completion per Reddit account using atomic `hSetNX`, then indexes that stored run in a Redis sorted set. Retrying cannot replace the original time, stars, or rank.
+- Ranking remains stars descending, then time ascending. The top 100 and the current player's true rank are returned, including when that player is outside the first page.
+- The completion overlay shows the current run immediately, asynchronously replaces it with canonical server data, labels synchronization, ignores stale responses after retry/navigation, and reports when the first run was retained.
+- Standalone Phaser previews use only the current player's row; no fictional Reddit accounts are displayed. Verification includes the host contract and immutable-first-run response behavior.
+
+**Custom-level Reddit posts (v33)** — completed the Level Editor upload path across Phaser and Devvit Web.
+
+- The editor serializes start/goal points, rectangle/circle/triangle obstacles, 1–10 stars, and the author-cleared solution. It caps courses at 12 walls and 96 function characters so valid drafts fit Reddit's 2 KB `postData` limit.
+- The Devvit client requests Reddit's run-as-user consent from the trusted UPLOAD tap. `devvit.json` declares `permissions.reddit.asUser: ["SUBMIT_POST"]`; without that exact scope Devvit returns `false` without showing a prompt. The server revalidates every field, submits the custom post with `runAs: 'USER'`, and records the authenticated username as author metadata.
+- Opening a custom-level post exposes its `postData` through `/api/init`, and Play loads the authored course with custom clear/share chrome.
+- Custom completions use Redis leaderboards namespaced by `custom:<postId>`, preventing records from different authored posts from mixing.
+- The verified v33 bundle is synced to `src/client/public/content.js`. Phaser verification passes 229 tests; the Devvit wrapper passes type-check, formatting, and production build.
+
+**Custom-post direct entry and preview (v34)** — made authored-level posts feel like the level itself instead of a generic game entrypoint.
+
+- Custom posts skip the Phaser title menu and transition directly into the authored level.
+- The in-game heading is exactly `<Reddit username>'s Level`; the `DAILY` prefix remains reserved for actual daily challenges.
+- The Devvit splash fetches `/api/init` and, for custom posts, draws the level's start, goal, walls, and stars below the title and above the `Play level` button. Non-custom posts retain the generic splash.
+- The verified v34 bundle is synced to `src/client/public/content.js`. Phaser verification passes 229 tests; the Devvit wrapper passes type-check, formatting, and production build.
+
+**Returnable custom-level navigation (v35)** — kept automatic custom-level entry without trapping the player in a redirect loop.
+
+- A custom post consumes its automatic redirect only once per page load. The first Title setup still opens the authored course immediately.
+- The Play hamburger and the completion overlay's `TITLE` button now land on and remain at the title menu. `PLAY CUSTOM LEVEL` starts the authored course again on demand.
+- The verified v35 bundle is synced to `src/client/public/content.js`. Phaser verification passes 231 tests; the Devvit wrapper passes type-check, formatting, and production build.
+
 ## Key constants (`src/config.ts`)
 
 - Canvas `W=384 H=288` (4:3). World `x∈[-10,10] y∈[-8,8]`.
 - `GOAL_TOL=0.4`, `STAR_TOL=0.3`, `SAMPLE_DX=0.02` (collision), `DRAW_DX=0.05` (draw), `UNSTABLE_Y=12` (|y|>12 ⇒ "unstable").
 - `TRACE_SPEED=8`, `TRACE_RAMP=0.45`, `COEF_STEP=0.1`, `PERSP_FAR=0.35` (grid tilt).
-- `LEADERBOARD_FAKE_COUNT=20`, `LEADERBOARD_ROW_H=11` (prototype board density).
+- `LEADERBOARD_ROW_H=11` (board density).
 - Layout rects: `GRAPH={x:12,y:26,w:360,h:176}`, `PANEL={x:0,y:204,w:384,h:84}`, `TOPBAR_H=22`.
 - `COL` palette: `accent` `#5cd6ff` (cyan), `accent2` `#a78bff` (violet), `goal` `#6cffb0` (mint), `star` `#ffd86b`, `bad` `#ff6b7a`.
 
@@ -141,12 +170,9 @@ Earlier (v12): ported three feature commits from the local build into the TS sou
 
 ## Open items / suggested next steps
 
-1. **Leaderboard backend:** v18 uses stable fake users by design. For production Devvit Web, back `logic/leaderboard` with Redis keyed by `levelId + userId` (daily ids already include the player's local calendar date), resolve Reddit display names server-side, and keep the existing stars-first/time-second comparator.
-2. **UPLOAD has no backend.** Wire it to actually persist/publish a custom level (define a serialization format for `{start, goal, obstacles, stars, adv}`; the editor already snaps everything to 3dp). Consider where custom levels get stored and how they're played.
-3. **Starless-level edge case:** a level with **zero stars** currently counts as "all stars collected" the instant the ship reaches the goal, so UPLOAD unlocks on goal alone. Decide whether to require ≥1 star.
-4. **FUNCTION-tab LAUNCH position** was placed on the right (matching Play's LAUNCH). If the intent was the exact bottom-left spot of the TOOLS-tab LAUNCH, the keypad needs reflowing to make room.
-5. **Playtest the editor visually** — the sandbox can screenshot; verify covers logic/type-safety but not layout. Watch panel text overflow at 384px width.
+1. **FUNCTION-tab LAUNCH position** was placed on the right (matching Play's LAUNCH). If the intent was the exact bottom-left spot of the TOOLS-tab LAUNCH, the keypad needs reflowing to make room.
+2. **Authenticated Reddit playtest:** create, solve, and upload a level in the configured playtest subreddit to confirm the consent dialog and final user-owned post on a real account.
 
 ## Verifying you're set up
 
-`open_project` → `read_files ["engine/raster/index.md"]` → `read_files ["src/scenes/editor.ts"]` → make changes with `write_files` → `verify` (expect `228 passed, 0 failed`) → `preview` → `finish`.
+`open_project` → `read_files ["engine/raster/index.md"]` → `read_files ["src/scenes/editor.ts"]` → make changes with `write_files` → `verify` (expect `231 passed, 0 failed`) → `preview` → `finish`.
