@@ -1,6 +1,6 @@
 # Gradient Descent — Agent Handoff
 
-_Last updated: 2026-07-15 · Published version: **42** · Phaser project id: `RjzqGQux4x1`_
+_Last updated: 2026-07-15 · Published version: **46** · Phaser project id: `RjzqGQux4x1`_
 
 ## TL;DR — read this first
 
@@ -19,7 +19,7 @@ All tools are prefixed `mcp__phaser-game-agent__phaser_game_agent_*` (some are d
 2. **`snapshot`** with a label before any big/risky change (keeps newest 5; restore with `restore`).
 3. **`read_files`** / **`grep`** / **`ls`** to explore. ⚠️ `read_files` fails if the batch is too large — read big files (e.g. `play.ts` ~34KB) one at a time.
 4. **`write_files`** to author. ⚠️ **This overwrites the ENTIRE file** — there is no partial-edit tool for the sandbox. You must supply full file contents. Read the file first, modify, write it whole.
-5. **`verify`** — runs `tsc` (type-check) + `src/verify.ts` acceptance tests. Must be `ok: true` before publishing. Currently **236 tests pass, 0 fail**.
+5. **`verify`** — runs `tsc` (type-check) + `src/verify.ts` acceptance tests. Must be `ok: true` before publishing. Currently **243 tests pass, 0 fail**.
 6. **`preview`** with a `changes:` note — builds + publishes a new version to the user's Phaser account, returns the play URL.
 7. **`finish`** — pauses the sandbox to stop billing (auto-resumes on next call). Call it when done each session.
 
@@ -51,7 +51,7 @@ Engine docs live in the sandbox at `engine/raster/*.md` + `*.d.ts` — **referen
 
 ```
 game.ts            scene roster + boot: { title, play, gameOver, levelSelect, editor }
-game.json          resolution preset (custom 384x288, 4:3, pixel) — single source of truth for canvas
+game.json          resolution preset (custom 384x384 universal cover canvas, pixel) — single source of truth
 config.ts          ALL constants + the COL palette (see "Key constants" below)
 verify.ts          acceptance tests (type-check + runtime asserts)
 logic/
@@ -197,6 +197,14 @@ Earlier (v12): ported three feature commits from the local build into the TS sou
 - **Music:** the v40 approach armed `window` `pointerdown`/`keydown` listeners in `setup()`, but on Reddit those didn't reliably fire from canvas taps and the AudioContext was often still autoplay-suspended when `music()` ran — so the track only became audible after a level round-trip, and felt like it restarted. Replaced `armPersistentMusic` with `startMusicOnce(sound, url)` called from the title's **engine `onTap`** (a gesture the engine itself processes), which calls `sound.resume()` then `sound.music(...)`. A module singleton still guarantees exactly one `music()` call per session, so returning to the menu never restarts it. Confirmed in the published bundle: `.music(` appears once, minified as `resume(),music(url,{loop,volume,fadeIn})`.
 - Phaser verification passes 236 tests; **v42 published**. `src/client/public/content.js` is now **synced to v42** (superseding the v39 note above). The Devvit build's `localize-game-assets` plugin rewrites its external asset URLs to `/assets/`. Logo verified by booting the built bundle locally; **music still needs a real Reddit playtest** to confirm audio on-device.
 
+**Universal responsive viewport (v46)** — replaced fixed-height and CSS-only aspect workarounds with engine-owned responsive layout.
+
+- `game.json` now declares a 384×384 pixel canvas with `fit: "cover"` and a 2:1 safe-aspect target. The square canvas supplies bleed, while `Scene.viewport` identifies the exact visible slice for the current webview.
+- `config.ts` owns mutable `VIEW`, `GRAPH`, and `PANEL` rectangles. Every scene updates them from `onResize`: top HUD meets the visible ceiling, bottom controls meet the visible floor, side controls meet the visible edges, and the graph expands/contracts between the HUD strips.
+- Play and Editor derive both drawing and hit targets from the same responsive rectangles. Title, Level Select, Game Over, tutorial, level-clear actions, and leaderboard also reflow inside the live viewport, so cover-fit cropping does not remove functionality.
+- World/collision math is unchanged. `worldToScreen` and `screenToWorld` consume the live graph rectangle, and verification covers landscape and portrait edge anchoring plus projection round-trips.
+- Phaser verification passes **243 tests**; **v46 published**. The generated `src/client/public/content.js` is synced to v46.
+
 ## Devvit wrapper edits (local — not yet deployed)
 
 These touch only the local Devvit Web wrapper (`src/client/splash.html`), not the Phaser sandbox source, so they carry **no new Phaser version**. `npm run check` passes (type-check + prettier + `vite build`); ship them with `npm run deploy` / `npm run launch`. Verified by rendering the splash in headless Chrome, not yet on a live Reddit post.
@@ -217,11 +225,11 @@ These touch only the local Devvit Web wrapper (`src/client/splash.html`), not th
 
 ## Key constants (`src/config.ts`)
 
-- Canvas `W=384 H=288` (4:3). World `x∈[-10,10] y∈[-8,8]`.
+- Canvas `W=384 H=384` (universal square, cover fit); the live visible rectangle comes from `Scene.viewport`. World `x∈[-10,10] y∈[-8,8]`.
 - `GOAL_TOL=0.4`, `STAR_TOL=0.3`, `SAMPLE_DX=0.02` (collision), `DRAW_DX=0.05` (draw), `UNSTABLE_Y=12` (|y|>12 ⇒ "unstable").
 - `TRACE_SPEED=8`, `TRACE_RAMP=0.45`, `COEF_STEP=0.1`, `PERSP_FAR=0.35` (grid tilt).
 - `LEADERBOARD_ROW_H=11` (board density).
-- Layout rects: `GRAPH={x:12,y:26,w:360,h:176}`, `PANEL={x:0,y:204,w:384,h:84}`, `TOPBAR_H=22`.
+- Responsive layout: `TOPBAR_H=22`, `PANEL.h=84`; `VIEW`, `GRAPH`, and `PANEL` are updated from the live viewport on resize.
 - `COL` palette: `accent` `#5cd6ff` (cyan), `accent2` `#a78bff` (violet), `goal` `#6cffb0` (mint), `star` `#ffd86b`, `bad` `#ff6b7a`.
 
 ## Conventions & gotchas
@@ -241,4 +249,4 @@ These touch only the local Devvit Web wrapper (`src/client/splash.html`), not th
 
 ## Verifying you're set up
 
-`open_project` → `read_files ["engine/raster/index.md"]` → `read_files ["src/scenes/editor.ts"]` → make changes with `write_files` → `verify` (expect `236 passed, 0 failed`) → `preview` → `finish`.
+`open_project` → `read_files ["engine/raster/index.md"]` → `read_files ["src/scenes/editor.ts"]` → make changes with `write_files` → `verify` (expect `243 passed, 0 failed`) → `preview` → `finish`.
